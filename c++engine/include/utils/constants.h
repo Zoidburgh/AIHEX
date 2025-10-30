@@ -228,6 +228,39 @@ constexpr int P2_CHAINS[P2_CHAIN_COUNT][5] = {
 constexpr int P2_CHAIN_LENGTHS[P2_CHAIN_COUNT] = {3, 4, 5, 4, 3};
 
 // ============================================================================
+// HEX-TO-CHAINS MAPPING (for incremental scoring optimization)
+// ============================================================================
+
+// Maps each hex to which scoring chains it belongs to
+// Each hex is part of exactly 2 chains: one P1 chain and one P2 chain
+struct HexChains {
+    int p1ChainIndex;  // Which P1 chain (0-4)
+    int p2ChainIndex;  // Which P2 chain (0-4)
+};
+
+constexpr HexChains HEX_TO_CHAINS[NUM_HEXES] = {
+    {0, 0},  // Hex 0:  P1 chain 0, P2 chain 0
+    {1, 0},  // Hex 1:  P1 chain 1, P2 chain 0
+    {0, 1},  // Hex 2:  P1 chain 0, P2 chain 1
+    {2, 0},  // Hex 3:  P1 chain 2, P2 chain 0
+    {1, 1},  // Hex 4:  P1 chain 1, P2 chain 1
+    {0, 2},  // Hex 5:  P1 chain 0, P2 chain 2
+    {2, 1},  // Hex 6:  P1 chain 2, P2 chain 1
+    {1, 2},  // Hex 7:  P1 chain 1, P2 chain 2
+    {3, 1},  // Hex 8:  P1 chain 3, P2 chain 1
+    {2, 2},  // Hex 9:  P1 chain 2, P2 chain 2 (center)
+    {1, 3},  // Hex 10: P1 chain 1, P2 chain 3
+    {3, 2},  // Hex 11: P1 chain 3, P2 chain 2
+    {2, 3},  // Hex 12: P1 chain 2, P2 chain 3
+    {4, 2},  // Hex 13: P1 chain 4, P2 chain 2
+    {3, 3},  // Hex 14: P1 chain 3, P2 chain 3
+    {2, 4},  // Hex 15: P1 chain 2, P2 chain 4
+    {4, 3},  // Hex 16: P1 chain 4, P2 chain 3
+    {3, 4},  // Hex 17: P1 chain 3, P2 chain 4
+    {4, 4}   // Hex 18: P1 chain 4, P2 chain 4
+};
+
+// ============================================================================
 // CHAIN LENGTH CONSTRAINT
 // ============================================================================
 

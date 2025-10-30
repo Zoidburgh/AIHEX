@@ -37,6 +37,8 @@ HexukiBitboard::HexukiBitboard()
     , currentPlayer(PLAYER_1)
     , symmetryStillPossible(true)
     , tilesAreIdentical(true)
+    , cachedP1Score(0)
+    , cachedP2Score(0)
     , zobristHash(0)
 {
     reset();
@@ -59,6 +61,10 @@ void HexukiBitboard::reset() {
     currentPlayer = PLAYER_1;
     symmetryStillPossible = true;
     tilesAreIdentical = tilesMatch(p1AvailableTiles, p2AvailableTiles);
+
+    // Calculate initial scores (center hex = value 1)
+    cachedP1Score = calculatePlayerScore(PLAYER_1);
+    cachedP2Score = calculatePlayerScore(PLAYER_2);
 
     zobristHash = Zobrist::hash(*this);
 }
@@ -470,9 +476,22 @@ std::vector<Move> HexukiBitboard::getValidMoves() const {
 // ============================================================================
 
 void HexukiBitboard::makeMove(const Move& move) {
+    // INCREMENTAL SCORING: Calculate old chain scores before placing tile
+    const HexChains& chains = HEX_TO_CHAINS[move.hexId];
+    int oldP1ChainScore = calculateChainScore(P1_CHAINS[chains.p1ChainIndex], P1_CHAIN_LENGTHS[chains.p1ChainIndex]);
+    int oldP2ChainScore = calculateChainScore(P2_CHAINS[chains.p2ChainIndex], P2_CHAIN_LENGTHS[chains.p2ChainIndex]);
+
     // Place tile on board
     hexOccupied |= (1u << move.hexId);
     hexValues[move.hexId] = move.tileValue;
+
+    // INCREMENTAL SCORING: Calculate new chain scores after placing tile
+    int newP1ChainScore = calculateChainScore(P1_CHAINS[chains.p1ChainIndex], P1_CHAIN_LENGTHS[chains.p1ChainIndex]);
+    int newP2ChainScore = calculateChainScore(P2_CHAINS[chains.p2ChainIndex], P2_CHAIN_LENGTHS[chains.p2ChainIndex]);
+
+    // Update cached scores with delta (only affected chains changed)
+    cachedP1Score += (newP1ChainScore - oldP1ChainScore);
+    cachedP2Score += (newP2ChainScore - oldP2ChainScore);
 
     // Remove tile from current player's available tiles
     std::vector<int>& tiles = (currentPlayer == PLAYER_1) ? p1AvailableTiles : p2AvailableTiles;
@@ -504,9 +523,22 @@ void HexukiBitboard::unmakeMove(const Move& move) {
     std::vector<int>& tiles = (currentPlayer == PLAYER_1) ? p1AvailableTiles : p2AvailableTiles;
     tiles.push_back(move.tileValue);
 
+    // INCREMENTAL SCORING: Calculate chain scores before removing tile
+    const HexChains& chains = HEX_TO_CHAINS[move.hexId];
+    int oldP1ChainScore = calculateChainScore(P1_CHAINS[chains.p1ChainIndex], P1_CHAIN_LENGTHS[chains.p1ChainIndex]);
+    int oldP2ChainScore = calculateChainScore(P2_CHAINS[chains.p2ChainIndex], P2_CHAIN_LENGTHS[chains.p2ChainIndex]);
+
     // Clear tile from board
     hexOccupied &= ~(1u << move.hexId);
     hexValues[move.hexId] = 0;
+
+    // INCREMENTAL SCORING: Calculate chain scores after removing tile
+    int newP1ChainScore = calculateChainScore(P1_CHAINS[chains.p1ChainIndex], P1_CHAIN_LENGTHS[chains.p1ChainIndex]);
+    int newP2ChainScore = calculateChainScore(P2_CHAINS[chains.p2ChainIndex], P2_CHAIN_LENGTHS[chains.p2ChainIndex]);
+
+    // Update cached scores with delta
+    cachedP1Score += (newP1ChainScore - oldP1ChainScore);
+    cachedP2Score += (newP2ChainScore - oldP2ChainScore);
 
     // Note: symmetryStillPossible is not restored since symmetry checks are disabled
     // If symmetry is re-enabled later, this would need to track the previous state
@@ -552,7 +584,9 @@ int HexukiBitboard::calculatePlayerScore(int player) const {
 }
 
 int HexukiBitboard::getScore(int player) const {
-    return calculatePlayerScore(player);
+    // INCREMENTAL SCORING: Return cached value instead of recalculating
+    // This eliminates 26M score recalculations at depth 10
+    return (player == PLAYER_1) ? cachedP1Score : cachedP2Score;
 }
 
 // ============================================================================
@@ -631,6 +665,10 @@ void HexukiBitboard::setHexValue(int hexId, int tileValue) {
     hexOccupied |= (1u << hexId);
     hexValues[hexId] = tileValue;
 
+    // BUGFIX: Recalculate cached scores (puzzle loading doesn't use makeMove)
+    cachedP1Score = calculatePlayerScore(PLAYER_1);
+    cachedP2Score = calculatePlayerScore(PLAYER_2);
+
     // Recalculate hash
     zobristHash = Zobrist::hash(*this);
 }
@@ -641,6 +679,10 @@ void HexukiBitboard::removeHexValue(int hexId) {
     // Remove the tile
     hexOccupied &= ~(1u << hexId);
     hexValues[hexId] = 0;
+
+    // BUGFIX: Recalculate cached scores
+    cachedP1Score = calculatePlayerScore(PLAYER_1);
+    cachedP2Score = calculatePlayerScore(PLAYER_2);
 
     // Recalculate hash
     zobristHash = Zobrist::hash(*this);
@@ -659,6 +701,11 @@ void HexukiBitboard::clearBoard() {
     // Clear all tiles but keep player and move count
     hexOccupied = 0;
     std::memset(hexValues, 0, sizeof(hexValues));
+
+    // BUGFIX: Reset cached scores to 0
+    cachedP1Score = 0;
+    cachedP2Score = 0;
+
     zobristHash = Zobrist::hash(*this);
 }
 
