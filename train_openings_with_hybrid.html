@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Train Opening Book with Hybrid AI</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        .container {
+            background: #252526;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        h1 { color: #4ec9b0; }
+        h2 { color: #569cd6; }
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button:hover { background: #1177bb; }
+        button:disabled {
+            background: #3c3c3c;
+            cursor: not-allowed;
+        }
+        .info-box {
+            background: #2d2d30;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 3px solid #4ec9b0;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-box {
+            background: #2d2d30;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #4ec9b0;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #858585;
+            margin-top: 5px;
+        }
+        #log {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            border: 1px solid #3c3c3c;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #1e1e1e;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0e639c, #1177bb);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+        }
+        input[type="number"] {
+            padding: 8px;
+            background: #2d2d30;
+            border: 1px solid #3c3c3c;
+            color: #d4d4d4;
+            border-radius: 4px;
+            width: 100px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📖 Opening Book Training with Hybrid AI</h1>
+
+    <div class="container">
+        <h2>Strategy Overview</h2>
+        <div class="info-box">
+            <strong>How this training works:</strong><br><br>
+            <strong>Exploration Phase:</strong><br>
+            • Try ALL possible opening moves (54 first moves)<br>
+            • For each opening, play games with HYBRID AI (policy + minimax endgame)<br>
+            • Track win rates for each opening move<br><br>
+            <strong>Result:</strong> Discover which opening moves lead to best outcomes!<br>
+            • Perfect endgames guaranteed (minimax)<br>
+            • Opening quality measured by actual results<br>
+            • Creates data-driven opening book
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Configuration</h2>
+
+        <label>Games per Opening Move:</label><br>
+        <input type="number" id="gamesPerOpening" value="20" min="5" max="100">
+        <span style="color: #858585; margin-left: 10px;">← Each of 54 openings will be tested this many times</span>
+        <br><br>
+
+        <label>Minimax Threshold (empty positions):</label><br>
+        <input type="number" id="minimaxThreshold" value="6" min="4" max="10">
+        <span style="color: #858585; margin-left: 10px;">← Use minimax when this many or fewer empty</span>
+        <br><br>
+
+        <div style="margin-top: 15px; color: #858585;">
+            Total games to play: <span id="totalGames">1080</span> (54 openings × games per opening)
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Training Controls</h2>
+        <button onclick="startTraining()" id="startBtn">Start Training</button>
+        <button onclick="stopTraining()" id="stopBtn" disabled>Stop Training</button>
+        <button onclick="downloadOpeningBook()" id="downloadBtn" disabled>Download Opening Book</button>
+        <button onclick="clearLog()">Clear Log</button>
+
+        <div class="progress-bar" style="margin-top: 20px;">
+            <div class="progress-fill" id="progressBar" style="width: 0%">0%</div>
+        </div>
+
+        <div class="stats-grid" id="stats">
+            <div class="stat-box">
+                <div class="stat-value" id="gamesPlayed">0</div>
+                <div class="stat-label">Games Played</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="openingsTested">0</div>
+                <div class="stat-label">Openings Tested</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="bestOpening">-</div>
+                <div class="stat-label">Best Opening</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="bestWinRate">0%</div>
+                <div class="stat-label">Best Win Rate</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Training Log</h2>
+        <div id="log"></div>
+    </div>
+
+    <script src="hexuki_game_engine_v2.js"></script>
+    <script src="minimax_endgame.js"></script>
+    <script>
+        let openingBook = {};
+        let isTraining = false;
+        let gamesCompleted = 0;
+
+        // Update total games calculation
+        document.getElementById('gamesPerOpening').addEventListener('input', () => {
+            const gamesPerOpening = parseInt(document.getElementById('gamesPerOpening').value);
+            document.getElementById('totalGames').textContent = (54 * gamesPerOpening).toLocaleString();
+        });
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            logDiv.textContent += message + '\n';
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+        }
+
+        function updateProgress(current, total) {
+            const percent = Math.round((current / total) * 100);
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.width = percent + '%';
+            progressBar.textContent = `${percent}% (${current.toLocaleString()} / ${total.toLocaleString()})`;
+        }
+
+        function updateStats() {
+            document.getElementById('gamesPlayed').textContent = gamesCompleted.toLocaleString();
+
+            const openingsTested = Object.keys(openingBook).length;
+            document.getElementById('openingsTested').textContent = openingsTested;
+
+            // Find best opening
+            let bestOpening = null;
+            let bestWR = 0;
+
+            for (const [move, stats] of Object.entries(openingBook)) {
+                if (stats.games >= 5) { // Only consider openings with 5+ games
+                    const wr = stats.wins / stats.games;
+                    if (wr > bestWR) {
+                        bestWR = wr;
+                        bestOpening = move;
+                    }
+                }
+            }
+
+            if (bestOpening) {
+                document.getElementById('bestOpening').textContent = bestOpening;
+                document.getElementById('bestWinRate').textContent = (bestWR * 100).toFixed(1) + '%';
+            }
+        }
+
+        function chooseHybridMove(game, threshold) {
+            const emptyCount = game.board.filter(h => h.value === null).length;
+
+            // Use minimax for endgame
+            if (emptyCount <= threshold) {
+                const solver = new MinimaxEndgameSolver(game);
+                const move = solver.findBestMove(false); // verbose=false
+                if (move) {
+                    return { hexId: move.hexId, tileValue: move.tile };
+                }
+            }
+
+            // For opening/midgame, choose random from legal moves
+            const legalMoves = game.getAllValidMoves();
+            if (legalMoves.length === 0) return null;
+            return legalMoves[Math.floor(Math.random() * legalMoves.length)];
+        }
+
+        function playGameWithOpening(openingMove, threshold) {
+            const game = new HexukiGameEngineV2();
+            let moveCount = 0;
+            const maxMoves = 18;
+
+            // First move: forced opening
+            game.makeMove(openingMove.hexId, openingMove.tileValue);
+            moveCount++;
+
+            // Rest of game: hybrid AI for both players
+            while (!game.gameEnded && moveCount < maxMoves) {
+                const move = chooseHybridMove(game, threshold);
+                if (!move) break;
+
+                game.makeMove(move.hexId, move.tileValue);
+                moveCount++;
+            }
+
+            const scores = game.calculateScores();
+
+            // Return result from Player 1's perspective (who made the opening move)
+            return {
+                player1Score: scores.player1,
+                player2Score: scores.player2,
+                winner: scores.player1 > scores.player2 ? 1 : scores.player2 > scores.player1 ? 2 : 0
+            };
+        }
+
+        function getAllOpeningMoves() {
+            const game = new HexukiGameEngineV2();
+            return game.getAllValidMoves();
+        }
+
+        async function startTraining() {
+            const gamesPerOpening = parseInt(document.getElementById('gamesPerOpening').value);
+            const threshold = parseInt(document.getElementById('minimaxThreshold').value);
+
+            openingBook = {};
+            gamesCompleted = 0;
+            isTraining = true;
+
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('downloadBtn').disabled = true;
+
+            log('='.repeat(80));
+            log(`Starting Opening Book Training`);
+            log(`Games per opening: ${gamesPerOpening}`);
+            log(`Minimax threshold: ${threshold} empty positions`);
+            log('='.repeat(80));
+
+            const allOpenings = getAllOpeningMoves();
+            const totalGames = allOpenings.length * gamesPerOpening;
+
+            log(`Found ${allOpenings.length} possible opening moves`);
+            log(`Total games to play: ${totalGames.toLocaleString()}`);
+            log('');
+
+            // Test each opening
+            for (let i = 0; i < allOpenings.length && isTraining; i++) {
+                const opening = allOpenings[i];
+                const moveKey = `t${opening.tileValue}h${opening.hexId}`;
+
+                if (!openingBook[moveKey]) {
+                    openingBook[moveKey] = {
+                        tile: opening.tileValue,
+                        hexId: opening.hexId,
+                        games: 0,
+                        wins: 0,
+                        losses: 0,
+                        ties: 0
+                    };
+                }
+
+                // Play multiple games with this opening
+                for (let game = 0; game < gamesPerOpening && isTraining; game++) {
+                    const result = playGameWithOpening(opening, threshold);
+
+                    openingBook[moveKey].games++;
+                    if (result.winner === 1) {
+                        openingBook[moveKey].wins++;
+                    } else if (result.winner === 2) {
+                        openingBook[moveKey].losses++;
+                    } else {
+                        openingBook[moveKey].ties++;
+                    }
+
+                    gamesCompleted++;
+
+                    // Update UI every 10 games
+                    if (gamesCompleted % 10 === 0) {
+                        updateStats();
+                        updateProgress(gamesCompleted, totalGames);
+                        await new Promise(resolve => setTimeout(resolve, 1));
+                    }
+                }
+
+                // Log progress for this opening
+                const stats = openingBook[moveKey];
+                const wr = (stats.wins / stats.games * 100).toFixed(1);
+                log(`${moveKey}: ${stats.wins}W-${stats.losses}L-${stats.ties}T (${wr}% WR)`);
+            }
+
+            if (isTraining) {
+                log('');
+                log('='.repeat(80));
+                log(`Training complete! ${gamesCompleted.toLocaleString()} games played`);
+                log(`Tested ${Object.keys(openingBook).length} opening moves`);
+                log('='.repeat(80));
+                log('');
+
+                // Show top 10 openings
+                const sorted = Object.entries(openingBook)
+                    .sort((a, b) => (b[1].wins / b[1].games) - (a[1].wins / a[1].games));
+
+                log('TOP 10 OPENING MOVES:');
+                for (let i = 0; i < Math.min(10, sorted.length); i++) {
+                    const [move, stats] = sorted[i];
+                    const wr = (stats.wins / stats.games * 100).toFixed(1);
+                    log(`  ${i+1}. ${move}: ${wr}% (${stats.wins}W-${stats.losses}L-${stats.ties}T)`);
+                }
+
+                log('');
+                log('WORST 10 OPENING MOVES:');
+                const worst = sorted.slice(-10).reverse();
+                for (let i = 0; i < worst.length; i++) {
+                    const [move, stats] = worst[i];
+                    const wr = (stats.wins / stats.games * 100).toFixed(1);
+                    log(`  ${i+1}. ${move}: ${wr}% (${stats.wins}W-${stats.losses}L-${stats.ties}T)`);
+                }
+
+                document.getElementById('downloadBtn').disabled = false;
+            } else {
+                log('Training stopped by user');
+            }
+
+            updateStats();
+            updateProgress(gamesCompleted, totalGames);
+
+            isTraining = false;
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+        }
+
+        function stopTraining() {
+            isTraining = false;
+            log('Stopping training...');
+        }
+
+        function downloadOpeningBook() {
+            if (Object.keys(openingBook).length === 0) {
+                alert('No opening book data to download!');
+                return;
+            }
+
+            const timestamp = Date.now();
+            const filename = `hexuki_opening_book_${gamesCompleted}games_${timestamp}.json`;
+
+            const data = {
+                version: '1.0',
+                created: new Date().toISOString(),
+                totalGames: gamesCompleted,
+                gamesPerOpening: parseInt(document.getElementById('gamesPerOpening').value),
+                minimaxThreshold: parseInt(document.getElementById('minimaxThreshold').value),
+                openings: openingBook
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+
+            URL.revokeObjectURL(url);
+
+            log(`Downloaded: ${filename}`);
+        }
+
+        // Initial message
+        log('Opening Book Training Ready');
+        log('Configure settings and click "Start Training"');
+        log('');
+        log('Strategy:');
+        log('  • Tests all 54 possible opening moves');
+        log('  • Each game uses hybrid AI (random midgame + minimax endgame)');
+        log('  • Discovers which openings lead to best outcomes');
+    </script>
+</body>
+</html>

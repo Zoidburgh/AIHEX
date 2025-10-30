@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Scoring Calculation</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+        }
+        h1, h2 { color: #00ff00; }
+        .section {
+            background: #2a2a2a;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        pre { background: #000; padding: 10px; overflow-x: auto; }
+        .mismatch { color: #ff0000; font-weight: bold; }
+        .match { color: #00ff00; }
+    </style>
+</head>
+<body>
+    <h1>Scoring Calculation Debug</h1>
+
+    <div class="section">
+        <h2>Board State After 18 Moves</h2>
+        <div id="boardState"></div>
+    </div>
+
+    <div class="section">
+        <h2>V2 Engine Score Calculation</h2>
+        <div id="v2Scores"></div>
+    </div>
+
+    <script src="hexuki_game_engine_v2.js"></script>
+    <script>
+        // Play the deterministic game
+        const game = new HexukiGameEngineV2();
+        const moves = [
+            {hexId: 4, tileValue: 1},
+            {hexId: 1, tileValue: 1},
+            {hexId: 0, tileValue: 2},
+            {hexId: 2, tileValue: 2},
+            {hexId: 3, tileValue: 3},
+            {hexId: 5, tileValue: 3},
+            {hexId: 6, tileValue: 4},
+            {hexId: 7, tileValue: 4},
+            {hexId: 8, tileValue: 5},
+            {hexId: 10, tileValue: 5},
+            {hexId: 11, tileValue: 6},
+            {hexId: 12, tileValue: 6},
+            {hexId: 13, tileValue: 7},
+            {hexId: 14, tileValue: 7},
+            {hexId: 15, tileValue: 8},
+            {hexId: 16, tileValue: 8},
+            {hexId: 17, tileValue: 9},
+            {hexId: 18, tileValue: 9}
+        ];
+
+        moves.forEach(move => {
+            game.makeMove(move.hexId, move.tileValue);
+        });
+
+        // Display board state
+        let boardHTML = '<pre>';
+        boardHTML += 'Hex ID | Value | Owner\n';
+        boardHTML += '-------|-------|-------\n';
+        for (let i = 0; i < 19; i++) {
+            const hex = game.board[i];
+            boardHTML += `  ${i.toString().padStart(2)}   |   ${(hex.value || '-').toString().padStart(1)}   | ${hex.owner || 'empty'}\n`;
+        }
+        boardHTML += '</pre>';
+        document.getElementById('boardState').innerHTML = boardHTML;
+
+        // Calculate and display V2 scores with detailed breakdown
+        let v2HTML = '<h3>Player 1 Chains:</h3><pre>';
+        let p1Total = 0;
+        game.player1Chains.forEach((chain, idx) => {
+            let product = 1;
+            let details = chain.map(hexId => {
+                const val = game.board[hexId].value || 1;
+                product *= val;
+                return `${hexId}:${val}`;
+            }).join(' × ');
+            v2HTML += `Chain ${idx + 1} [${chain}]: ${details} = ${product}\n`;
+            p1Total += product;
+        });
+        v2HTML += `\nPlayer 1 Total: ${p1Total}\n`;
+        v2HTML += '</pre>';
+
+        v2HTML += '<h3>Player 2 Chains:</h3><pre>';
+        let p2Total = 0;
+        game.player2Chains.forEach((chain, idx) => {
+            let product = 1;
+            let details = chain.map(hexId => {
+                const val = game.board[hexId].value || 1;
+                product *= val;
+                return `${hexId}:${val}`;
+            }).join(' × ');
+            v2HTML += `Chain ${idx + 1} [${chain}]: ${details} = ${product}\n`;
+            p2Total += product;
+        });
+        v2HTML += `\nPlayer 2 Total: ${p2Total}\n`;
+        v2HTML += '</pre>';
+
+        document.getElementById('v2Scores').innerHTML = v2HTML;
+
+        // Also log to console for easy copy-paste
+        console.log('V2 Engine Scores:');
+        console.log('Player 1:', p1Total);
+        console.log('Player 2:', p2Total);
+    </script>
+</body>
+</html>

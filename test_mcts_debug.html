@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MCTS Debug - Check Results Distribution</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+
+        h2 { color: #00ff00; }
+
+        .test-section {
+            background: #0a0a0a;
+            border: 2px solid #00ff00;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            margin: 5px;
+        }
+
+        pre {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            color: #00ff00;
+        }
+
+        .good { color: #00ff00; }
+        .bad { color: #ff0000; }
+        .warn { color: #ffff00; }
+    </style>
+</head>
+<body>
+    <h1>MCTS Debug Console</h1>
+
+    <div class="test-section">
+        <h2>Test 1: Random Playout Distribution</h2>
+        <button onclick="testRandomPlayouts()">Run 1000 Random Games</button>
+        <pre id="randomResults"></pre>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: MCTS First Move Analysis</h2>
+        <button onclick="testFirstMove()">Analyze First Move (1K sims)</button>
+        <pre id="firstMoveResults"></pre>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Compare 1K vs 10K on Same Position</h2>
+        <button onclick="compareStrengths()">Run Comparison (10 games)</button>
+        <pre id="comparisonResults"></pre>
+    </div>
+
+    <script src="hexuki_game_engine_v2.js"></script>
+    <script src="mcts_ai_player.js"></script>
+    <script>
+        function testRandomPlayouts() {
+            const output = document.getElementById('randomResults');
+            output.textContent = 'Running 1000 random games...\n';
+
+            let p1Wins = 0, p2Wins = 0, draws = 0;
+            let p1TotalScore = 0, p2TotalScore = 0;
+
+            for (let i = 0; i < 1000; i++) {
+                const game = new HexukiGameEngineV2();
+
+                // Play completely random game
+                while (!game.gameEnded) {
+                    const moves = game.getAllValidMoves();
+                    if (moves.length === 0) break;
+
+                    const move = moves[Math.floor(Math.random() * moves.length)];
+                    game.makeMove(move.hexId, move.tileValue);
+                }
+
+                const scores = game.calculateScores();
+                p1TotalScore += scores.player1;
+                p2TotalScore += scores.player2;
+
+                if (scores.player1 > scores.player2) p1Wins++;
+                else if (scores.player2 > scores.player1) p2Wins++;
+                else draws++;
+            }
+
+            const p1WinRate = (p1Wins / 1000 * 100).toFixed(1);
+            const p2WinRate = (p2Wins / 1000 * 100).toFixed(1);
+            const avgP1Score = (p1TotalScore / 1000).toFixed(0);
+            const avgP2Score = (p2TotalScore / 1000).toFixed(0);
+
+            let analysis = `Results from 1000 random games:\n\n`;
+            analysis += `Player 1 wins: ${p1Wins} (${p1WinRate}%)\n`;
+            analysis += `Player 2 wins: ${p2Wins} (${p2WinRate}%)\n`;
+            analysis += `Draws: ${draws}\n\n`;
+            analysis += `Average P1 score: ${avgP1Score}\n`;
+            analysis += `Average P2 score: ${avgP2Score}\n\n`;
+
+            // Check if heavily biased
+            const bias = Math.abs(p1Wins - p2Wins);
+            if (bias > 100) {
+                analysis += `⚠️  WARNING: Game appears biased toward Player ${p1Wins > p2Wins ? '1' : '2'}\n`;
+                analysis += `This could explain why more MCTS sims don't help!\n`;
+            } else {
+                analysis += `✓ Game appears relatively balanced in random play\n`;
+            }
+
+            output.textContent = analysis;
+        }
+
+        function testFirstMove() {
+            const output = document.getElementById('firstMoveResults');
+            output.textContent = 'Analyzing first move with 1000 simulations...\n';
+
+            const game = new HexukiGameEngineV2();
+            const ai = new MCTSPlayer(1000);
+
+            const result = ai.getBestMove(game);
+
+            let analysis = `Best first move: Hex ${result.move.hexId}, Tile ${result.move.tileValue}\n`;
+            analysis += `Win rate: ${(result.stats.winRate * 100).toFixed(1)}%\n`;
+            analysis += `Simulations: ${result.stats.simulations}\n\n`;
+
+            analysis += `Top 5 alternatives:\n`;
+            result.stats.alternatives.forEach((alt, idx) => {
+                analysis += `  ${idx + 1}. Hex ${alt.move.hexId}, Tile ${alt.move.tileValue} - `;
+                analysis += `${alt.visits} visits, ${(alt.winRate * 100).toFixed(1)}% win rate\n`;
+            });
+
+            analysis += `\n`;
+
+            // Check if win rates are clustered around 50%
+            const winRates = result.stats.alternatives.map(a => a.winRate);
+            const avgWinRate = winRates.reduce((a, b) => a + b, 0) / winRates.length;
+            const variance = winRates.reduce((sum, wr) => sum + Math.pow(wr - avgWinRate, 2), 0) / winRates.length;
+            const stdDev = Math.sqrt(variance);
+
+            analysis += `Win rate statistics:\n`;
+            analysis += `  Average: ${(avgWinRate * 100).toFixed(1)}%\n`;
+            analysis += `  Std Dev: ${(stdDev * 100).toFixed(1)}%\n\n`;
+
+            if (stdDev < 0.02) {
+                analysis += `⚠️  WARNING: Very low variance in win rates!\n`;
+                analysis += `This suggests random playouts aren't discriminating moves well.\n`;
+            } else if (Math.abs(avgWinRate - 0.5) > 0.1) {
+                analysis += `⚠️  WARNING: Win rates not centered around 50%!\n`;
+                analysis += `Expected ~50% for first move, got ${(avgWinRate * 100).toFixed(1)}%\n`;
+            } else {
+                analysis += `✓ Win rates look reasonable\n`;
+            }
+
+            output.textContent = analysis;
+        }
+
+        function compareStrengths() {
+            const output = document.getElementById('comparisonResults');
+            output.textContent = 'Running 10 games: 1K sims vs 10K sims...\n\n';
+
+            let wins1K = 0, wins10K = 0, draws = 0;
+
+            for (let i = 0; i < 10; i++) {
+                output.textContent += `Game ${i + 1}/10...\n`;
+
+                const result = playMCTSGame(1000, 10000, false);
+
+                if (result.winner === 1) wins1K++;
+                else if (result.winner === 2) wins10K++;
+                else draws++;
+
+                output.textContent += `  Winner: ${result.winner === 0 ? 'DRAW' : 'P' + result.winner} `;
+                output.textContent += `(${result.scores.player1} - ${result.scores.player2})\n`;
+            }
+
+            output.textContent += `\n=== FINAL RESULTS ===\n`;
+            output.textContent += `1K sims (P1): ${wins1K} wins\n`;
+            output.textContent += `10K sims (P2): ${wins10K} wins\n`;
+            output.textContent += `Draws: ${draws}\n\n`;
+
+            if (wins10K <= wins1K) {
+                output.textContent += `❌ PROBLEM: 10K should beat 1K!\n`;
+                output.textContent += `This indicates an issue with MCTS implementation.\n`;
+            } else {
+                output.textContent += `✓ 10K beats 1K as expected\n`;
+            }
+        }
+    </script>
+</body>
+</html>

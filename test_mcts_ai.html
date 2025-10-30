@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HEXUKI - MCTS AI Test</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+
+        h1 {
+            text-align: center;
+            color: #00ff00;
+            text-shadow: 0 0 10px #00ff00;
+        }
+
+        .control-panel {
+            background: #0a0a0a;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .settings {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .setting {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            color: #00ff00;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="number"], select {
+            background: #1a1a1a;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            padding: 8px;
+            font-family: 'Courier New', monospace;
+        }
+
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #00cc00;
+            box-shadow: 0 0 20px #00ff00;
+        }
+
+        button:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        .results {
+            background: #0a0a0a;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .game-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid #00ff00;
+        }
+
+        .stat-label {
+            color: #00ff00;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #00ff00;
+            text-shadow: 0 0 5px #00ff00;
+        }
+
+        .winner {
+            color: #ffff00;
+            text-shadow: 0 0 10px #ffff00;
+        }
+
+        .move-log {
+            max-height: 400px;
+            overflow-y: auto;
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 15px;
+        }
+
+        .move-entry {
+            padding: 8px;
+            margin-bottom: 5px;
+            border-left: 3px solid #00ff00;
+            padding-left: 10px;
+        }
+
+        .move-entry.player2 {
+            border-left-color: #0088ff;
+        }
+
+        .progress {
+            margin-top: 15px;
+            padding: 10px;
+            background: #1a1a1a;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .progress.active {
+            display: block;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 2px solid #00ff00;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>🤖 HEXUKI MCTS AI Test</h1>
+
+    <div class="control-panel">
+        <h2>Test Configuration</h2>
+
+        <div class="settings">
+            <div class="setting">
+                <label>Player 1 Simulations:</label>
+                <input type="number" id="p1Sims" value="10000" min="100" max="100000" step="100">
+            </div>
+
+            <div class="setting">
+                <label>Player 2 Simulations:</label>
+                <input type="number" id="p2Sims" value="10000" min="100" max="100000" step="100">
+            </div>
+
+            <div class="setting">
+                <label>Number of Games:</label>
+                <input type="number" id="numGames" value="1" min="1" max="100">
+            </div>
+
+            <div class="setting">
+                <label>Verbose Output:</label>
+                <select id="verbose">
+                    <option value="true">Yes</option>
+                    <option value="false" selected>No</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button id="runSingleBtn" onclick="runSingleGame()">Run Single Game</button>
+            <button id="runMultipleBtn" onclick="runMultipleGames()">Run Multiple Games</button>
+            <button id="strengthTestBtn" onclick="runStrengthTest()">Strength Test (1K vs 10K vs 50K)</button>
+        </div>
+
+        <div id="progress" class="progress">
+            <span class="spinner"></span>
+            <span id="progressText">Running...</span>
+        </div>
+    </div>
+
+    <div id="results" class="results" style="display: none;">
+        <h2>Results</h2>
+
+        <div id="gameInfo" class="game-info"></div>
+
+        <div id="moveLog" class="move-log"></div>
+    </div>
+
+    <script src="hexuki_game_engine_v2.js"></script>
+    <script src="mcts_ai_player.js"></script>
+    <script>
+        function showProgress(text) {
+            const progress = document.getElementById('progress');
+            const progressText = document.getElementById('progressText');
+            progress.classList.add('active');
+            progressText.textContent = text;
+            disableButtons(true);
+        }
+
+        function hideProgress() {
+            const progress = document.getElementById('progress');
+            progress.classList.remove('active');
+            disableButtons(false);
+        }
+
+        function disableButtons(disabled) {
+            document.getElementById('runSingleBtn').disabled = disabled;
+            document.getElementById('runMultipleBtn').disabled = disabled;
+            document.getElementById('strengthTestBtn').disabled = disabled;
+        }
+
+        function runSingleGame() {
+            showProgress('Running MCTS game...');
+
+            // Small delay to let UI update
+            setTimeout(() => {
+                const p1Sims = parseInt(document.getElementById('p1Sims').value);
+                const p2Sims = parseInt(document.getElementById('p2Sims').value);
+                const verbose = document.getElementById('verbose').value === 'true';
+
+                console.log(`Starting game: P1 ${p1Sims} sims vs P2 ${p2Sims} sims`);
+
+                const startTime = Date.now();
+                const result = playMCTSGame(p1Sims, p2Sims, verbose);
+                const totalTime = Date.now() - startTime;
+
+                displayGameResult(result, totalTime);
+                hideProgress();
+            }, 100);
+        }
+
+        function runMultipleGames() {
+            const numGames = parseInt(document.getElementById('numGames').value);
+            showProgress(`Running ${numGames} games...`);
+
+            setTimeout(() => {
+                const p1Sims = parseInt(document.getElementById('p1Sims').value);
+                const p2Sims = parseInt(document.getElementById('p2Sims').value);
+
+                const results = {
+                    player1Wins: 0,
+                    player2Wins: 0,
+                    draws: 0,
+                    totalTime: 0,
+                    games: []
+                };
+
+                console.log(`Starting ${numGames} games: P1 ${p1Sims} sims vs P2 ${p2Sims} sims`);
+
+                for (let i = 0; i < numGames; i++) {
+                    const startTime = Date.now();
+                    const result = playMCTSGame(p1Sims, p2Sims, false);
+                    const gameTime = Date.now() - startTime;
+
+                    if (result.winner === 1) results.player1Wins++;
+                    else if (result.winner === 2) results.player2Wins++;
+                    else results.draws++;
+
+                    results.totalTime += gameTime;
+                    results.games.push(result);
+
+                    document.getElementById('progressText').textContent =
+                        `Game ${i + 1}/${numGames} completed...`;
+                }
+
+                displayMultipleGamesResult(results, p1Sims, p2Sims);
+                hideProgress();
+            }, 100);
+        }
+
+        function runStrengthTest() {
+            showProgress('Running strength test...');
+
+            setTimeout(() => {
+                const configs = [
+                    {name: '1K', sims: 1000},
+                    {name: '10K', sims: 10000},
+                    {name: '50K', sims: 50000}
+                ];
+
+                const results = [];
+
+                for (let i = 0; i < configs.length; i++) {
+                    for (let j = i + 1; j < configs.length; j++) {
+                        const p1 = configs[i];
+                        const p2 = configs[j];
+
+                        console.log(`Testing ${p1.name} vs ${p2.name}...`);
+                        document.getElementById('progressText').textContent =
+                            `Testing ${p1.name} vs ${p2.name}...`;
+
+                        const startTime = Date.now();
+                        const result = playMCTSGame(p1.sims, p2.sims, false);
+                        const gameTime = Date.now() - startTime;
+
+                        results.push({
+                            p1: p1.name,
+                            p2: p2.name,
+                            winner: result.winner,
+                            scores: result.scores,
+                            time: gameTime
+                        });
+                    }
+                }
+
+                displayStrengthTestResults(results);
+                hideProgress();
+            }, 100);
+        }
+
+        function displayGameResult(result, totalTime) {
+            const resultsDiv = document.getElementById('results');
+            const gameInfoDiv = document.getElementById('gameInfo');
+            const moveLogDiv = document.getElementById('moveLog');
+
+            resultsDiv.style.display = 'block';
+
+            // Game info
+            const winnerText = result.winner === 0 ? 'DRAW' : `Player ${result.winner}`;
+            const winnerClass = result.winner > 0 ? 'winner' : '';
+
+            gameInfoDiv.innerHTML = `
+                <div class="stat-box">
+                    <div class="stat-label">Winner</div>
+                    <div class="stat-value ${winnerClass}">${winnerText}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Player 1 Score</div>
+                    <div class="stat-value">${result.scores.player1}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Player 2 Score</div>
+                    <div class="stat-value">${result.scores.player2}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Total Time</div>
+                    <div class="stat-value">${(totalTime / 1000).toFixed(1)}s</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">P1 Avg Sims/Move</div>
+                    <div class="stat-value">${Math.round(result.player1Stats.avgSimulationsPerMove)}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">P2 Avg Sims/Move</div>
+                    <div class="stat-value">${Math.round(result.player2Stats.avgSimulationsPerMove)}</div>
+                </div>
+            `;
+
+            // Move log
+            let moveLogHTML = '<h3>Move History</h3>';
+            result.moveHistory.forEach((entry, idx) => {
+                const playerClass = entry.player === 2 ? 'player2' : '';
+                moveLogHTML += `
+                    <div class="move-entry ${playerClass}">
+                        <strong>Move ${idx + 1} - Player ${entry.player}:</strong>
+                        Hex ${entry.move.hexId}, Tile ${entry.move.tileValue}
+                        (${entry.stats.simulations} sims, ${entry.stats.timeMs}ms,
+                        win rate: ${(entry.stats.winRate * 100).toFixed(1)}%)
+                    </div>
+                `;
+            });
+
+            moveLogDiv.innerHTML = moveLogHTML;
+        }
+
+        function displayMultipleGamesResult(results, p1Sims, p2Sims) {
+            const resultsDiv = document.getElementById('results');
+            const gameInfoDiv = document.getElementById('gameInfo');
+            const moveLogDiv = document.getElementById('moveLog');
+
+            resultsDiv.style.display = 'block';
+
+            const totalGames = results.games.length;
+            const p1WinRate = (results.player1Wins / totalGames * 100).toFixed(1);
+            const p2WinRate = (results.player2Wins / totalGames * 100).toFixed(1);
+            const avgTime = (results.totalTime / totalGames / 1000).toFixed(1);
+
+            gameInfoDiv.innerHTML = `
+                <div class="stat-box">
+                    <div class="stat-label">Total Games</div>
+                    <div class="stat-value">${totalGames}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Player 1 Wins (${p1Sims} sims)</div>
+                    <div class="stat-value ${results.player1Wins > results.player2Wins ? 'winner' : ''}">
+                        ${results.player1Wins} (${p1WinRate}%)
+                    </div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Player 2 Wins (${p2Sims} sims)</div>
+                    <div class="stat-value ${results.player2Wins > results.player1Wins ? 'winner' : ''}">
+                        ${results.player2Wins} (${p2WinRate}%)
+                    </div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Draws</div>
+                    <div class="stat-value">${results.draws}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Avg Time/Game</div>
+                    <div class="stat-value">${avgTime}s</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Total Time</div>
+                    <div class="stat-value">${(results.totalTime / 1000).toFixed(1)}s</div>
+                </div>
+            `;
+
+            // Game-by-game results
+            let logHTML = '<h3>Game Results</h3>';
+            results.games.forEach((game, idx) => {
+                const winnerText = game.winner === 0 ? 'DRAW' : `P${game.winner}`;
+                logHTML += `
+                    <div class="move-entry">
+                        <strong>Game ${idx + 1}:</strong> ${winnerText} wins
+                        (P1: ${game.scores.player1}, P2: ${game.scores.player2})
+                    </div>
+                `;
+            });
+
+            moveLogDiv.innerHTML = logHTML;
+        }
+
+        function displayStrengthTestResults(results) {
+            const resultsDiv = document.getElementById('results');
+            const gameInfoDiv = document.getElementById('gameInfo');
+            const moveLogDiv = document.getElementById('moveLog');
+
+            resultsDiv.style.display = 'block';
+
+            gameInfoDiv.innerHTML = `
+                <div class="stat-box">
+                    <div class="stat-label">Strength Test</div>
+                    <div class="stat-value">Complete</div>
+                </div>
+            `;
+
+            let logHTML = '<h3>Strength Test Results</h3>';
+            logHTML += '<p>Testing how simulation count affects playing strength:</p>';
+
+            results.forEach(result => {
+                const winnerName = result.winner === 1 ? result.p1 :
+                                   result.winner === 2 ? result.p2 : 'DRAW';
+                logHTML += `
+                    <div class="move-entry">
+                        <strong>${result.p1} vs ${result.p2}:</strong>
+                        Winner: <span class="winner">${winnerName}</span>
+                        (${result.scores.player1} - ${result.scores.player2})
+                        [${(result.time / 1000).toFixed(1)}s]
+                    </div>
+                `;
+            });
+
+            moveLogDiv.innerHTML = logHTML;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+/**
+ * INSTRUCTIONS: Copy and paste this into the browser console
+ * while hexuki_ANTISYMMETRY_TEST.html is open
+ *
+ * This will set the board to match the V2 engine's output
+ * and calculate what score the real game gets
+ */
+
+// Set board state to match V2 engine output
+const boardState = [
+    {id: 0, value: 2, owner: 'player1'},
+    {id: 1, value: 1, owner: 'player2'},
+    {id: 2, value: 2, owner: 'player2'},
+    {id: 3, value: 3, owner: 'player1'},
+    {id: 4, value: 1, owner: 'player1'},
+    {id: 5, value: 3, owner: 'player2'},
+    {id: 6, value: 4, owner: 'player1'},
+    {id: 7, value: 4, owner: 'player2'},
+    {id: 8, value: 5, owner: 'player1'},
+    {id: 9, value: 1, owner: 'neutral'},
+    {id: 10, value: 5, owner: 'player2'},
+    {id: 11, value: 6, owner: 'player1'},
+    {id: 12, value: 6, owner: 'player2'},
+    {id: 13, value: 7, owner: 'player1'},
+    {id: 14, value: 7, owner: 'player2'},
+    {id: 15, value: 8, owner: 'player1'},
+    {id: 16, value: 8, owner: 'player2'},
+    {id: 17, value: 9, owner: 'player1'},
+    {id: 18, value: 9, owner: 'player2'}
+];
+
+// Apply to game board
+game.board.board.forEach((hex, idx) => {
+    hex.value = boardState[idx].value;
+    hex.owner = boardState[idx].owner;
+});
+
+// Calculate scores directly
+console.log('Board state set to match V2 engine');
+console.log('Calculating scores with real game logic...');
+
+const scores = game.calculateScores();
+console.log('═══════════════════════════════════════');
+console.log('REAL GAME SCORES FOR V2 ENGINE BOARD:');
+console.log('═══════════════════════════════════════');
+console.log('Player 1:', scores.player1);
+console.log('Player 2:', scores.player2);
+console.log('Winner:', scores.player1 > scores.player2 ? 'Player 1' : 'Player 2');
+console.log('═══════════════════════════════════════');

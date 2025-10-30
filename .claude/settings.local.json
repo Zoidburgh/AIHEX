@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -m http.server:*)",
+      "Bash(start http://localhost:8000/puzzle_editor.html)",
+      "Bash(awk:*)",
+      "Bash(where:*)",
+      "Read(//c/Users/Michael/Desktop/**)",
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "Bash(\"/c/Users/Michael/Desktop/hextest/emsdk/upstream/emscripten/emcc.bat\" -O3 -std=c++17 -I include src/core/bitboard.cpp src/core/move.cpp src/core/zobrist.cpp src/ai/mcts.cpp src/ai/mcts_node.cpp src/ai/minimax.cpp src/wasm_interface.cpp -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 -s \"EXPORT_NAME=''HexukiWasm''\" -s ENVIRONMENT=web -s ASSERTIONS=0 -s DISABLE_EXCEPTION_CATCHING=1 -s NO_FILESYSTEM=1 -s AGGRESSIVE_VARIABLE_ELIMINATION=1 --closure 1 -flto -lembind -o wasm/hexuki.js)",
+      "Bash(md5sum:*)",
+      "Bash(\"/c/Users/Michael/Desktop/hextest/emsdk/upstream/emscripten/emcc.bat\" -O3 -std=c++17 -I include src/core/bitboard.cpp src/core/move.cpp src/core/zobrist.cpp src/ai/mcts.cpp src/ai/mcts_node.cpp src/ai/minimax.cpp src/wasm_interface.cpp -s WASM=1 -s ALLOW_MEMORY_GROWTH=1 -s MODULARIZE=1 -s \"EXPORT_NAME=''''HexukiWasm''''\" -s ENVIRONMENT=web -s ASSERTIONS=0 -s DISABLE_EXCEPTION_CATCHING=1 -s NO_FILESYSTEM=1 -s AGGRESSIVE_VARIABLE_ELIMINATION=1 --closure 1 -flto -lembind -o wasm/hexuki.js)",
+      "Bash(git init:*)",
+      "Bash(cat:*)",
+      "Bash(git config:*)",
+      "Bash(git remote add:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

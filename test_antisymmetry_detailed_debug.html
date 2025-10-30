@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Antisymmetry Rule Debug Test</title>
+    <style>
+        body {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+        }
+        .test-section {
+            background: #2d2d30;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .pass { color: #4ec9b0; }
+        .fail { color: #f48771; }
+        .info { color: #569cd6; }
+        .warn { color: #dcdcaa; }
+        h1 { color: #569cd6; }
+        h2 { color: #4ec9b0; margin-top: 0; }
+        pre {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 3px solid #569cd6;
+            overflow-x: auto;
+        }
+        .log-entry {
+            margin: 5px 0;
+            padding: 8px;
+            background: #252526;
+            border-radius: 4px;
+        }
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #1177bb;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Antisymmetry Rule Detailed Debug</h1>
+    <p class="info">Testing the exact sequence that appeared to violate antisymmetry</p>
+
+    <div class="test-section">
+        <h2>Test Sequence</h2>
+        <pre>Move 1: P1 plays Hex 14, Tile 6
+Move 2: P2 plays Hex 17, Tile 2
+Move 3: P1 plays Hex 16, Tile 2 ← SHOULD BE BLOCKED (creates symmetry)</pre>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Controls</h2>
+        <button onclick="runTest()">Run Test</button>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Results</h2>
+        <div id="results"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Detailed Log</h2>
+        <div id="log"></div>
+    </div>
+
+    <script src="hexuki_game_engine_v2.js"></script>
+    <script>
+        let logEntries = [];
+
+        function log(message, type = 'info') {
+            const entry = { message, type, timestamp: new Date().toLocaleTimeString() };
+            logEntries.push(entry);
+            updateLogDisplay();
+        }
+
+        function updateLogDisplay() {
+            const logDiv = document.getElementById('log');
+            logDiv.innerHTML = logEntries.map(entry =>
+                `<div class="log-entry ${entry.type}">
+                    [${entry.timestamp}] ${entry.message}
+                </div>`
+            ).join('');
+            // Scroll to bottom
+            logDiv.parentElement.scrollTop = logDiv.parentElement.scrollHeight;
+        }
+
+        function clearLog() {
+            logEntries = [];
+            updateLogDisplay();
+            document.getElementById('results').innerHTML = '';
+        }
+
+        function displayBoard(game, title) {
+            let html = `<div style="margin: 10px 0;"><strong>${title}</strong></div>`;
+            html += '<pre style="font-size: 11px;">';
+
+            // Show board state
+            for (let i = 0; i < 19; i++) {
+                const hex = game.board[i];
+                const val = hex.value !== null ? `T${hex.value}` : '--';
+                const owner = hex.owner ? hex.owner : '  ';
+                html += `H${i.toString().padStart(2)}: ${val} (${owner})  `;
+                if (i === 0 || i === 2 || i === 5 || i === 8 || i === 12 || i === 15 || i === 17) {
+                    html += '\n';
+                }
+            }
+
+            html += '</pre>';
+            html += `<div style="font-size: 12px; color: #888;">`;
+            html += `MoveCount: ${game.moveCount}, `;
+            html += `CurrentPlayer: P${game.currentPlayer}, `;
+            html += `SymmetryPossible: ${game.symmetryStillPossible}`;
+            html += `</div>`;
+
+            return html;
+        }
+
+        function runTest() {
+            clearLog();
+            log('🚀 Starting antisymmetry test...', 'info');
+
+            const resultsDiv = document.getElementById('results');
+            let resultsHTML = '';
+
+            try {
+                // Create fresh game
+                const game = new HexukiGameEngineV2();
+                log('✓ Created fresh game instance', 'pass');
+
+                resultsHTML += displayBoard(game, 'Initial Board State');
+
+                // MOVE 1: P1 plays Hex 14, Tile 6
+                log('\n--- MOVE 1: P1 plays Hex 14, Tile 6 ---', 'info');
+                log(`Before move: moveCount=${game.moveCount}, symmetryStillPossible=${game.symmetryStillPossible}`, 'info');
+
+                const move1Success = game.makeMove(14, 6);
+                log(`makeMove(14, 6) returned: ${move1Success}`, move1Success ? 'pass' : 'fail');
+
+                if (!move1Success) {
+                    resultsHTML += '<div class="fail">❌ Move 1 rejected unexpectedly!</div>';
+                    throw new Error('Move 1 should have been allowed');
+                }
+
+                log(`After move: moveCount=${game.moveCount}, symmetryStillPossible=${game.symmetryStillPossible}`, 'info');
+                resultsHTML += displayBoard(game, 'After Move 1');
+
+                // MOVE 2: P2 plays Hex 17, Tile 2
+                log('\n--- MOVE 2: P2 plays Hex 17, Tile 2 ---', 'info');
+                log(`Before move: moveCount=${game.moveCount}, symmetryStillPossible=${game.symmetryStillPossible}`, 'info');
+
+                const move2Success = game.makeMove(17, 2);
+                log(`makeMove(17, 2) returned: ${move2Success}`, move2Success ? 'pass' : 'fail');
+
+                if (!move2Success) {
+                    resultsHTML += '<div class="fail">❌ Move 2 rejected unexpectedly!</div>';
+                    throw new Error('Move 2 should have been allowed');
+                }
+
+                log(`After move: moveCount=${game.moveCount}, symmetryStillPossible=${game.symmetryStillPossible}`, 'info');
+                resultsHTML += displayBoard(game, 'After Move 2');
+
+                // Check if board is currently mirrored
+                log('Checking if board is currently mirrored...', 'info');
+                const isCurrentlyMirrored = game.isBoardMirrored();
+                log(`isBoardMirrored() = ${isCurrentlyMirrored}`, isCurrentlyMirrored ? 'warn' : 'pass');
+
+                // MOVE 3: P1 plays Hex 16, Tile 2 (SHOULD BE BLOCKED!)
+                log('\n--- MOVE 3: P1 plays Hex 16, Tile 2 (THE CRITICAL TEST) ---', 'warn');
+                log(`Before move: moveCount=${game.moveCount}, symmetryStillPossible=${game.symmetryStillPossible}`, 'info');
+
+                // First check what getAllValidMoves says
+                log('Calling getAllValidMoves() to see if H16T2 is in the list...', 'info');
+                const validMoves = game.getAllValidMoves();
+                const h16t2IsValid = validMoves.some(m => m.hexId === 16 && m.tileValue === 2);
+                log(`H16T2 in valid moves: ${h16t2IsValid}`, h16t2IsValid ? 'fail' : 'pass');
+                log(`Total valid moves: ${validMoves.length}`, 'info');
+
+                // Now try to make the move
+                const move3Success = game.makeMove(16, 2);
+                log(`makeMove(16, 2) returned: ${move3Success}`, move3Success ? 'fail' : 'pass');
+
+                if (move3Success) {
+                    resultsHTML += '<div class="fail">❌ CRITICAL FAILURE: Move 3 was ALLOWED but should have been BLOCKED!</div>';
+                    resultsHTML += '<div class="fail">The antisymmetry rule is NOT working correctly!</div>';
+                    resultsHTML += displayBoard(game, 'After Move 3 (ILLEGAL - Should not exist)');
+
+                    // Verify the board is indeed symmetric
+                    const finallyMirrored = game.isBoardMirrored();
+                    log(`Board is now mirrored: ${finallyMirrored}`, 'fail');
+                    resultsHTML += `<div class="fail">Board is symmetric: ${finallyMirrored}</div>`;
+                } else {
+                    resultsHTML += '<div class="pass">✅ SUCCESS: Move 3 was correctly BLOCKED!</div>';
+                    resultsHTML += '<div class="pass">The antisymmetry rule is working as expected!</div>';
+                    resultsHTML += displayBoard(game, 'After Move 3 Rejected (Board Unchanged)');
+                }
+
+            } catch (error) {
+                log(`ERROR: ${error.message}`, 'fail');
+                resultsHTML += `<div class="fail">❌ Test failed with error: ${error.message}</div>`;
+            }
+
+            resultsDiv.innerHTML = resultsHTML;
+        }
+
+        // Auto-run on load
+        window.addEventListener('load', () => {
+            log('Page loaded. Ready to test.', 'info');
+        });
+    </script>
+</body>
+</html>

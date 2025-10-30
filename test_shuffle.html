@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Shuffle Function</title>
+</head>
+<body>
+    <h1>Testing Fisher-Yates Shuffle</h1>
+    <pre id="output"></pre>
+
+    <script src="hexuki_game_engine_v2.js"></script>
+    <script>
+        const output = document.getElementById('output');
+
+        function log(msg) {
+            output.textContent += msg + '\n';
+        }
+
+        // Fisher-Yates shuffle
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        log('Testing if shuffle creates diversity...\n');
+
+        const game = new HexukiGameEngineV2();
+        const moves = game.getAllValidMoves();
+
+        log(`Total legal moves: ${moves.length}`);
+        log('\nFirst 5 moves (original order):');
+        for (let i = 0; i < 5; i++) {
+            log(`  ${i+1}. t${moves[i].tileValue}h${moves[i].hexId}`);
+        }
+
+        log('\n' + '='.repeat(50));
+        log('Testing shuffle 10 times - first move selected:\n');
+
+        const selections = {};
+        for (let test = 0; test < 10; test++) {
+            const shuffled = shuffle([...moves]);
+            const selected = shuffled[0];
+            const key = `t${selected.tileValue}h${selected.hexId}`;
+
+            selections[key] = (selections[key] || 0) + 1;
+            log(`Test ${test+1}: ${key}`);
+        }
+
+        log('\n' + '='.repeat(50));
+        log('Selection distribution:');
+        for (const [move, count] of Object.entries(selections)) {
+            log(`  ${move}: ${count} times`);
+        }
+
+        log('\n' + '='.repeat(50));
+        if (Object.keys(selections).length === 1) {
+            log('FAIL: Shuffle always returns the same move!');
+            log('This is the bug causing identical games.');
+        } else {
+            log('SUCCESS: Shuffle creates diversity!');
+            log(`${Object.keys(selections).length} different moves selected`);
+        }
+    </script>
+</body>
+</html>

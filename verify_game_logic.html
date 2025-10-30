@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Verify Game Logic</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        h1 { color: #00ff00; }
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .panel {
+            background: #2a2a2a;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            padding: 20px;
+        }
+        .panel h2 {
+            margin-top: 0;
+            color: #00ff00;
+            border-bottom: 1px solid #00ff00;
+            padding-bottom: 10px;
+        }
+        #output {
+            background: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            height: 600px;
+            overflow-y: auto;
+            font-size: 11px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+        }
+        button {
+            background: #00ff00;
+            color: #1a1a1a;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover { background: #00cc00; }
+        .instructions {
+            background: #333;
+            padding: 15px;
+            border-left: 4px solid #00ff00;
+            margin: 15px 0;
+            font-size: 13px;
+        }
+        .move-sequence {
+            background: #000;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 12px;
+        }
+        .board-viz {
+            font-family: monospace;
+            font-size: 11px;
+            line-height: 1.2;
+            background: #000;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .hex-display {
+            display: inline-block;
+            width: 60px;
+            text-align: center;
+        }
+        .p1 { color: #ff6b6b; }
+        .p2 { color: #4ecdc4; }
+        .neutral { color: #888; }
+        .empty { color: #333; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Game Logic Verification</h1>
+    <p style="color: #888;">Compare headless engine results with actual game to verify identical behavior</p>
+
+    <button onclick="runTest()">Generate Test Game</button>
+    <button onclick="clearOutput()">Clear</button>
+
+    <div class="container">
+        <div class="panel">
+            <h2>📊 Headless Engine Results</h2>
+            <div id="output"></div>
+        </div>
+
+        <div class="panel">
+            <h2>📝 Manual Verification Instructions</h2>
+            <div class="instructions">
+                <p><strong>To verify the game logic is identical:</strong></p>
+                <ol>
+                    <li>Open <code>hexuki_ANTISYMMETRY_TEST.html</code> in a new tab</li>
+                    <li>Copy the move sequence from the left panel</li>
+                    <li>Replay each move in the actual game</li>
+                    <li>Compare the final board state and scores</li>
+                    <li>They should match EXACTLY</li>
+                </ol>
+            </div>
+
+            <div id="replay-instructions"></div>
+        </div>
+    </div>
+
+    <script src="hexuki_game_engine.js"></script>
+    <script>
+        const output = document.getElementById('output');
+        const replayInstructions = document.getElementById('replay-instructions');
+
+        function log(msg) {
+            output.textContent += msg + '\n';
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function clearOutput() {
+            output.textContent = '';
+            replayInstructions.innerHTML = '';
+        }
+
+        function visualizeBoard(board) {
+            // Create ASCII visualization of hex board matching the actual game layout
+            const hexMap = {};
+            board.forEach(hex => {
+                hexMap[hex.id] = hex;
+            });
+
+            function hexDisplay(id) {
+                const hex = hexMap[id];
+                if (hex.value === null) return '  ·  ';
+
+                let owner = '';
+                if (hex.owner === 'player1') owner = 'P1';
+                else if (hex.owner === 'player2') owner = 'P2';
+                else owner = 'NT';
+
+                // Pad to 5 chars for alignment
+                const display = `${hex.value}${owner}`;
+                return display.padEnd(5, ' ');
+            }
+
+            // Visual representation matching actual hex positions
+            let viz = '\n';
+            viz += '          ' + hexDisplay(0) + '\n';
+            viz += '       ' + hexDisplay(1) + '     ' + hexDisplay(2) + '\n';
+            viz += '    ' + hexDisplay(3) + '     ' + hexDisplay(4) + '     ' + hexDisplay(5) + '\n';
+            viz += '       ' + hexDisplay(6) + '     ' + hexDisplay(7) + '\n';
+            viz += '    ' + hexDisplay(8) + '     ' + hexDisplay(9) + '     ' + hexDisplay(10) + '\n';
+            viz += '       ' + hexDisplay(11) + '     ' + hexDisplay(12) + '\n';
+            viz += '    ' + hexDisplay(14) + '     ' + hexDisplay(13) + '     ' + hexDisplay(15) + '\n';
+            viz += '       ' + hexDisplay(17) + '     ' + hexDisplay(16) + '\n';
+            viz += '          ' + hexDisplay(18) + '\n';
+
+            return viz;
+        }
+
+        function runTest() {
+            clearOutput();
+
+            log('═══════════════════════════════════════');
+            log('🎮 GAME LOGIC VERIFICATION TEST');
+            log('═══════════════════════════════════════\n');
+
+            // Play a complete game with specific seed for reproducibility
+            const game = new HexukiGameEngine();
+            const moveHistory = [];
+
+            log('Starting new game...');
+            log('Initial state: Center hex (9) has value 1 (neutral)\n');
+
+            let moveNum = 0;
+            while (!game.gameEnded && moveNum < 18) {
+                const validMoves = game.getAllValidMoves();
+
+                if (validMoves.length === 0) {
+                    log('ERROR: No valid moves available!');
+                    break;
+                }
+
+                // Pick deterministically: lowest hex ID, then lowest tile value
+                validMoves.sort((a, b) => {
+                    if (a.hexId !== b.hexId) return a.hexId - b.hexId;
+                    return a.tileValue - b.tileValue;
+                });
+                const move = validMoves[0];
+
+                const player = game.currentPlayer;
+                const success = game.makeMove(move.hexId, move.tileValue);
+
+                if (success) {
+                    moveNum++;
+
+                    // Calculate chain lengths after this move
+                    const chainLengths = game.calculateChainLengths(player);
+                    chainLengths.sort((a, b) => b - a);
+
+                    moveHistory.push({
+                        moveNum,
+                        player,
+                        hexId: move.hexId,
+                        tileValue: move.tileValue
+                    });
+
+                    log(`Move ${moveNum}: Player ${player} places tile ${move.tileValue} on hex ${move.hexId}`);
+                    log(`  Chain lengths after move: [${chainLengths.join(', ')}] (longest: ${chainLengths[0]}, 2nd: ${chainLengths[1]}, diff: ${chainLengths[0] - chainLengths[1]})`);
+
+                    // Show occupied hexes
+                    const occupied = game.board.filter(h => h.value !== null).map(h => h.id);
+                    log(`  Occupied hexes: [${occupied.join(', ')}]`);
+                } else {
+                    log(`ERROR: Move failed!`);
+                    break;
+                }
+            }
+
+            log('\n═══════════════════════════════════════');
+            log('FINAL BOARD STATE');
+            log('═══════════════════════════════════════');
+            log('Legend: [Value][Owner] where P1=Player1, P2=Player2, NT=Neutral');
+            log(visualizeBoard(game.board));
+
+            log('\nHex ID Reference:');
+            log('          0    ');
+            log('       1     2  ');
+            log('    3     4     5');
+            log('       6     7  ');
+            log('    8     9    10');
+            log('      11    12  ');
+            log('   14    13    15');
+            log('      17    16  ');
+            log('         18     ');
+
+            log('\n═══════════════════════════════════════');
+            log('BOARD DETAILS (Hex ID: Value, Owner)');
+            log('═══════════════════════════════════════');
+            game.board.forEach(hex => {
+                if (hex.value !== null) {
+                    log(`Hex ${hex.id}: ${hex.value} (${hex.owner})`);
+                }
+            });
+
+            // Calculate scores
+            const scores = game.calculateScores();
+
+            log('\n═══════════════════════════════════════');
+            log('SCORE CALCULATION');
+            log('═══════════════════════════════════════');
+
+            // Show chain calculations for each player
+            log('\nPlayer 1 Chains:');
+            const p1Chains = [
+                [0, 2, 5],
+                [1, 4, 7, 10],
+                [3, 6, 9, 12, 15],
+                [8, 11, 14, 17],
+                [13, 16, 18]
+            ];
+
+            let p1Total = 0;
+            p1Chains.forEach((chain, idx) => {
+                let product = 1;
+                let hexValues = [];
+                chain.forEach(hexId => {
+                    const val = game.board[hexId].value;
+                    if (val !== null) {
+                        product *= val;
+                        hexValues.push(`${hexId}:${val}`);
+                    }
+                });
+                log(`  Chain ${idx + 1} [${chain}]: ${hexValues.join(' × ')} = ${product}`);
+                p1Total += product;
+            });
+            log(`  TOTAL: ${p1Total}`);
+
+            log('\nPlayer 2 Chains:');
+            const p2Chains = [
+                [0, 1, 3],
+                [2, 4, 6, 8],
+                [5, 7, 9, 11, 13],
+                [12, 14, 16, 10],
+                [15, 17, 18]
+            ];
+
+            let p2Total = 0;
+            p2Chains.forEach((chain, idx) => {
+                let product = 1;
+                let hexValues = [];
+                chain.forEach(hexId => {
+                    const val = game.board[hexId].value;
+                    if (val !== null) {
+                        product *= val;
+                        hexValues.push(`${hexId}:${val}`);
+                    }
+                });
+                log(`  Chain ${idx + 1} [${chain}]: ${hexValues.join(' × ')} = ${product}`);
+                p2Total += product;
+            });
+            log(`  TOTAL: ${p2Total}`);
+
+            log('\n═══════════════════════════════════════');
+            log('FINAL SCORES');
+            log('═══════════════════════════════════════');
+            log(`Player 1: ${scores.player1}`);
+            log(`Player 2: ${scores.player2}`);
+
+            const winner = scores.player1 > scores.player2 ? 1 : (scores.player2 > scores.player1 ? 2 : 0);
+            if (winner === 0) {
+                log(`Result: TIE`);
+            } else {
+                log(`Winner: Player ${winner}`);
+            }
+
+            // Generate replay instructions
+            let instructions = '<div class="instructions">';
+            instructions += '<h3>🎯 Replay These Moves in the Actual Game:</h3>';
+            instructions += '<div class="move-sequence">';
+
+            moveHistory.forEach(m => {
+                instructions += `Move ${m.moveNum}: Player ${m.player} → Hex ${m.hexId}, Tile ${m.tileValue}<br>`;
+            });
+
+            instructions += '</div>';
+            instructions += '<p><strong>Expected Final Scores:</strong></p>';
+            instructions += `<p>Player 1: ${scores.player1}<br>Player 2: ${scores.player2}</p>`;
+            instructions += '<p><strong>Expected Winner:</strong> ';
+            if (winner === 0) {
+                instructions += 'TIE</p>';
+            } else {
+                instructions += `Player ${winner}</p>`;
+            }
+            instructions += '<p style="color: #ff9900;">⚠️ If the actual game shows different results, there is a logic bug!</p>';
+            instructions += '</div>';
+
+            replayInstructions.innerHTML = instructions;
+        }
+
+        log('Ready! Click "Generate Test Game" to create a verification test.\n');
+    </script>
+</body>
+</html>

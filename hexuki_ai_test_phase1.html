@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hexuki AI - Phase 1 Testing</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            color: #00ff00;
+            text-align: center;
+            border-bottom: 2px solid #00ff00;
+            padding-bottom: 10px;
+        }
+
+        .section {
+            background: #2a2a2a;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .section h2 {
+            margin-top: 0;
+            color: #00ff00;
+        }
+
+        button {
+            background: #00ff00;
+            color: #1a1a1a;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+            font-family: 'Courier New', monospace;
+        }
+
+        button:hover {
+            background: #00cc00;
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        #console {
+            background: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            height: 400px;
+            overflow-y: auto;
+            font-size: 12px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+        }
+
+        .status {
+            font-size: 18px;
+            font-weight: bold;
+            padding: 10px;
+            text-align: center;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .status.pending {
+            background: #444;
+            color: #fff;
+        }
+
+        .status.running {
+            background: #ff9900;
+            color: #000;
+        }
+
+        .status.success {
+            background: #00ff00;
+            color: #000;
+        }
+
+        .status.failed {
+            background: #ff0000;
+            color: #fff;
+        }
+
+        .metric {
+            display: inline-block;
+            margin: 10px 20px;
+        }
+
+        .metric-label {
+            color: #888;
+            display: block;
+            font-size: 12px;
+        }
+
+        .metric-value {
+            color: #00ff00;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .instructions {
+            background: #333;
+            padding: 15px;
+            border-left: 4px solid #00ff00;
+            margin: 15px 0;
+        }
+
+        .instructions h3 {
+            margin-top: 0;
+            color: #00ff00;
+        }
+
+        .instructions ol {
+            margin: 10px 0;
+        }
+
+        .instructions li {
+            margin: 8px 0;
+        }
+
+        .error-text {
+            color: #ff0000;
+        }
+
+        .warn-text {
+            color: #ff9900;
+        }
+
+        .success-text {
+            color: #00ff00;
+        }
+    </style>
+</head>
+<body>
+    <h1>🤖 Hexuki AI Training System V2</h1>
+    <h2 style="text-align: center; color: #888;">Phase 1: Core Infrastructure Testing</h2>
+
+    <div class="section">
+        <h2>📋 Test Instructions</h2>
+        <div class="instructions">
+            <h3>What Phase 1 Tests:</h3>
+            <ol>
+                <li>Position hashing works correctly and consistently</li>
+                <li>Policy database stores and retrieves move statistics</li>
+                <li>Game simulation completes all 18 moves every time</li>
+                <li>Game validation catches errors and anomalies</li>
+                <li>Save/load preserves data correctly</li>
+                <li>1000 random games run without errors</li>
+            </ol>
+
+            <h3>How to Run Tests:</h3>
+            <ol>
+                <li>Click "Run Sanity Tests" first - these should all pass ✅</li>
+                <li>If sanity tests pass, click "Run Phase 1 (1000 Games)"</li>
+                <li>Watch the console output for any errors (red text)</li>
+                <li>Phase 1 should complete in 5-10 seconds</li>
+                <li>All 1000 games should be valid with 0 errors</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>🎮 Test Controls</h2>
+        <button id="sanityTestBtn" onclick="runSanityTests()">Run Sanity Tests</button>
+        <button id="phase1Btn" onclick="runPhase1()" disabled>Run Phase 1 (1000 Games)</button>
+        <button onclick="clearConsole()">Clear Console</button>
+        <button onclick="exportLogs()">Export Logs</button>
+
+        <div id="status" class="status pending">⏳ Ready to test</div>
+    </div>
+
+    <div class="section">
+        <h2>📊 Metrics</h2>
+        <div>
+            <div class="metric">
+                <span class="metric-label">Games Played</span>
+                <span class="metric-value" id="gamesPlayed">0</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Valid Games</span>
+                <span class="metric-value" id="validGames">0</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Errors</span>
+                <span class="metric-value error-text" id="errors">0</span>
+            </div>
+            <div class="metric">
+                <span class="metric-label">Speed</span>
+                <span class="metric-value" id="speed">0</span>
+                <span style="color: #888; font-size: 14px;"> games/sec</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>📟 Console Output</h2>
+        <div id="console"></div>
+    </div>
+
+    <!-- Load the AI trainer -->
+    <script src="hexuki_ai_trainer.js"></script>
+
+    <script>
+        let runner = null;
+        let consoleEl = document.getElementById('console');
+
+        // Create a simple mock HexukiGame for testing
+        // We'll tell the user to open the actual game file instead
+        console.log('⚠️  IFRAME LOADING ISSUE DETECTED');
+        console.log('');
+        console.log('Please use this alternative approach:');
+        console.log('1. Open hexuki_ANTISYMMETRY_TEST.html in a tab');
+        console.log('2. Open browser console (F12)');
+        console.log('3. Paste and run these commands:');
+        console.log('');
+        console.log('// Load AI trainer');
+        console.log('const script = document.createElement("script");');
+        console.log('script.src = "hexuki_ai_trainer.js";');
+        console.log('document.body.appendChild(script);');
+        console.log('');
+        console.log('// After it loads (~1 second), run sanity tests:');
+        console.log('HexukiAI.SanityTests.runAll(new HexukiAI.AILogger(HexukiAI.LogLevel.INFO));');
+        console.log('');
+        console.log('// If tests pass, run Phase 1:');
+        console.log('const runner = new HexukiAI.Phase1Runner();');
+        console.log('runner.run(1000);');
+        console.log('');
+
+        alert('Iframe loading is taking too long. Please see console for alternative instructions.');
+
+        // Override console.log to display in our console
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+
+            const message = args.map(arg => {
+                if (typeof arg === 'object') {
+                    return JSON.stringify(arg, null, 2);
+                }
+                return String(arg);
+            }).join(' ');
+
+            // Color code messages
+            let colorClass = '';
+            if (message.includes('❌') || message.includes('ERROR')) {
+                colorClass = 'error-text';
+            } else if (message.includes('⚠️') || message.includes('WARN')) {
+                colorClass = 'warn-text';
+            } else if (message.includes('✅') || message.includes('passed')) {
+                colorClass = 'success-text';
+            }
+
+            const line = document.createElement('div');
+            line.className = colorClass;
+            line.textContent = message;
+            consoleEl.appendChild(line);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        };
+
+        function clearConsole() {
+            consoleEl.innerHTML = '';
+        }
+
+        function updateStatus(text, className) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = text;
+            statusEl.className = 'status ' + className;
+        }
+
+        async function runSanityTests() {
+            clearConsole();
+            updateStatus('🧪 Running sanity tests...', 'running');
+            document.getElementById('sanityTestBtn').disabled = true;
+
+            // Wait for iframe to load
+            const iframe = document.getElementById('gameFrame');
+            if (!iframe.contentWindow.HexukiGame) {
+                console.log('⏳ Waiting for game to load...');
+                await new Promise(resolve => {
+                    iframe.onload = () => {
+                        setTimeout(resolve, 500); // Extra delay for game init
+                    };
+                });
+            }
+
+            // Make HexukiGame available globally
+            window.HexukiGame = iframe.contentWindow.HexukiGame;
+
+            console.log('\n');
+            const passed = window.HexukiAI.SanityTests.runAll(new window.HexukiAI.AILogger(window.HexukiAI.LogLevel.INFO));
+
+            if (passed) {
+                updateStatus('✅ Sanity tests PASSED - Ready for Phase 1', 'success');
+                document.getElementById('phase1Btn').disabled = false;
+            } else {
+                updateStatus('❌ Sanity tests FAILED - Fix errors first', 'failed');
+            }
+
+            document.getElementById('sanityTestBtn').disabled = false;
+        }
+
+        async function runPhase1() {
+            clearConsole();
+            updateStatus('🚀 Running Phase 1...', 'running');
+            document.getElementById('phase1Btn').disabled = true;
+
+            // Reset metrics
+            document.getElementById('gamesPlayed').textContent = '0';
+            document.getElementById('validGames').textContent = '0';
+            document.getElementById('errors').textContent = '0';
+            document.getElementById('speed').textContent = '0';
+
+            console.log('\n');
+            runner = new window.HexukiAI.Phase1Runner();
+
+            const startTime = Date.now();
+            const success = await runner.run(1000);
+            const elapsed = (Date.now() - startTime) / 1000;
+
+            // Update metrics
+            const policySummary = runner.policy.getSummary();
+            const logSummary = runner.logger.getSummary();
+
+            document.getElementById('gamesPlayed').textContent = policySummary.totalGamesPlayed;
+            document.getElementById('validGames').textContent = policySummary.totalGamesPlayed - logSummary.errors;
+            document.getElementById('errors').textContent = logSummary.errors;
+            document.getElementById('speed').textContent = (1000 / elapsed).toFixed(1);
+
+            if (success) {
+                updateStatus('✅ PHASE 1 COMPLETE - All systems working!', 'success');
+                console.log('\n🎉 You can now proceed to Phase 2!');
+            } else {
+                updateStatus('❌ PHASE 1 FAILED - Check console for errors', 'failed');
+            }
+
+            document.getElementById('phase1Btn').disabled = false;
+        }
+
+        function exportLogs() {
+            if (runner && runner.logger) {
+                runner.logger.exportLogs();
+                console.log('✅ Logs exported to file');
+            } else {
+                alert('Run Phase 1 first before exporting logs');
+            }
+        }
+
+        // Display ready message
+        console.log('═══════════════════════════════════════');
+        console.log('🤖 Hexuki AI Phase 1 Testing Ready');
+        console.log('═══════════════════════════════════════');
+        console.log('Click "Run Sanity Tests" to begin');
+        console.log('');
+    </script>
+</body>
+</html>

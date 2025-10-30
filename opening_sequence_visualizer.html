@@ -1,0 +1,4026 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HEXUKI Opening Sequence Visualizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1a1d29 0%, #2d3249 50%, #1e2139 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* Data Loading Section */
+        .loading-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            width: 100%;
+            max-width: 900px;
+        }
+
+        .loading-section h2 {
+            margin-bottom: 15px;
+            color: #1a202c;
+            font-size: 1.3em;
+        }
+
+        .file-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            gap: 15px;
+        }
+
+        .file-row label {
+            min-width: 180px;
+            font-weight: 500;
+        }
+
+        .file-row input[type="file"] {
+            flex: 1;
+        }
+
+        .status {
+            color: #27ae60;
+            font-weight: 600;
+        }
+
+        /* Opening Selection */
+        .selection-section {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            width: 100%;
+            max-width: 900px;
+            display: none;
+        }
+
+        .selection-section h2 {
+            margin-bottom: 15px;
+            color: #1a202c;
+            font-size: 1.3em;
+        }
+
+        .select-row {
+            margin-bottom: 15px;
+        }
+
+        .select-row label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #333;
+        }
+
+        .select-row select {
+            width: 100%;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            font-size: 1em;
+            background: white;
+        }
+
+        .select-row input[type="checkbox"] {
+            margin-right: 8px;
+            cursor: pointer;
+            transform: scale(1.2);
+        }
+
+        .select-row input[type="range"] {
+            cursor: pointer;
+        }
+
+        .select-row label {
+            cursor: pointer;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        /* Game Container */
+        .game-container {
+            background: linear-gradient(to right,
+                rgba(255, 240, 240, 0.98) 0%,
+                rgba(255, 255, 255, 0.98) 50%,
+                rgba(240, 248, 255, 0.98) 100%);
+            border-radius: 20px;
+            padding: 20px;
+            max-width: 960px;
+            width: 100%;
+            box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+            display: none;
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .game-header h1 {
+            color: #1a202c;
+            font-size: 2em;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .game-layout {
+            display: flex;
+            justify-content: center;
+            align-items: start;
+            position: relative;
+            margin: 0 auto;
+        }
+
+        .game-board-container {
+            position: relative;
+            z-index: 1;
+        }
+
+        .player-panel {
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 6px 24px rgba(0,0,0,0.12);
+            border: 1px solid rgba(0,0,0,0.08);
+            position: absolute;
+            width: 300px;
+            top: 0;
+        }
+
+        .player-panel.player1 {
+            left: -320px;
+            background: linear-gradient(145deg, #fdf6f6, #f8f9fa);
+        }
+
+        .player-panel.player2 {
+            right: -320px;
+            background: linear-gradient(145deg, #f6f8fd, #f8f9fa);
+        }
+
+        .player-panel h3 {
+            margin-bottom: 18px;
+            font-size: 1.4em;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .player-panel.player1 h3 {
+            color: #c0392b;
+        }
+
+        .player-panel.player2 h3 {
+            color: #2980b9;
+        }
+
+        .score {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin: 16px 0;
+            text-align: center;
+            padding: 12px;
+            background: rgba(255,255,255,0.5);
+            border-radius: 12px;
+        }
+
+        .tiles-info {
+            font-size: 0.9em;
+            color: #666;
+            text-align: center;
+            margin-top: 10px;
+            font-weight: 600;
+        }
+
+        .tiles-display {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            justify-content: center;
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(255,255,255,0.3);
+            border-radius: 8px;
+            min-height: 60px;
+        }
+
+        .tile-chip {
+            background: rgba(255,255,255,0.8);
+            border: 2px solid #333;
+            border-radius: 6px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1em;
+            font-family: 'JetBrains Mono', monospace;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .tile-chip:not(.used):hover {
+            transform: scale(1.15);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .tile-chip.selected {
+            transform: scale(1.2);
+            box-shadow: 0 0 0 3px #ffd700;
+            background: #fffacd;
+        }
+
+        .player-panel.player1 .tile-chip {
+            border-color: #c0392b;
+            color: #c0392b;
+        }
+
+        .player-panel.player2 .tile-chip {
+            border-color: #2980b9;
+            color: #2980b9;
+        }
+
+        .tile-chip.used {
+            opacity: 0.3;
+            text-decoration: line-through;
+            cursor: not-allowed;
+        }
+
+        /* Board styles */
+        .board-container {
+            width: 450px;
+            height: 500px;
+            position: relative;
+        }
+
+        #board {
+            width: 100%;
+            height: 100%;
+        }
+
+        .hex {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .hex polygon {
+            stroke: #2c3e50;
+            stroke-width: 2;
+            transition: all 0.2s ease;
+        }
+
+        .hex.empty polygon {
+            fill: #ecf0f1;
+        }
+
+        .hex.valid-move polygon {
+            fill: #d5f4e6;
+            stroke: #27ae60;
+            stroke-width: 3;
+        }
+
+        /* Last Move Display */
+        .last-move-display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+            font-weight: 500;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            min-height: 45px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .last-move-display .move-text {
+            font-size: 1.1em;
+            margin-bottom: 3px;
+        }
+
+        .last-move-display .confidence-text {
+            font-size: 0.85em;
+            opacity: 0.9;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .last-move-display.player1 {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+        }
+
+        .last-move-display.player2 {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+
+        .hex.valid-move:hover polygon {
+            fill: #a9dfbf;
+            stroke: #229954;
+        }
+
+        .hex.player1 polygon {
+            fill: #e74c3c;
+        }
+
+        .hex.player2 polygon {
+            fill: #3498db;
+        }
+
+        .hex-id {
+            font-size: 10px;
+            fill: #7f8c8d;
+            font-family: 'JetBrains Mono', monospace;
+            pointer-events: none;
+        }
+
+        .hex-text {
+            font-size: 28px;
+            font-weight: bold;
+            font-family: 'JetBrains Mono', monospace;
+            pointer-events: none;
+        }
+
+        .hex-text.player1 {
+            fill: #c0392b;
+        }
+
+        .hex-text.player2 {
+            fill: #2980b9;
+        }
+
+        /* Move Controls */
+        .move-controls {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .move-history {
+            max-height: 200px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .move-entry {
+            padding: 5px 10px;
+            margin-bottom: 3px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9em;
+        }
+
+        .move-entry.current {
+            background: #667eea;
+            color: white;
+            font-weight: bold;
+        }
+
+        .move-entry.player1 {
+            color: #c0392b;
+        }
+
+        .move-entry.player2 {
+            color: #2980b9;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 10px;
+        }
+
+        .game-info {
+            text-align: center;
+            margin-top: 10px;
+            font-size: 1.1em;
+            color: #333;
+            font-weight: 500;
+        }
+
+        /* AI Settings Panel */
+        .ai-settings-panel {
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.1) 0%, rgba(155, 89, 182, 0.1) 100%);
+            border: 2px solid rgba(52, 152, 219, 0.3);
+            border-radius: 10px;
+            margin: 15px 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #3498db 0%, #9b59b6 100%);
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s ease;
+        }
+
+        .settings-header:hover {
+            background: linear-gradient(135deg, #2980b9 0%, #8e44ad 100%);
+        }
+
+        .settings-summary {
+            color: white;
+            font-weight: 600;
+            font-size: 1em;
+        }
+
+        .settings-toggle {
+            color: white;
+            font-size: 1.2em;
+            transition: transform 0.3s ease;
+        }
+
+        .settings-toggle.expanded {
+            transform: rotate(180deg);
+        }
+
+        .settings-content {
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .settings-section {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .settings-section h4 {
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+            font-size: 1.1em;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 8px;
+        }
+
+        .settings-section label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+            font-weight: 500;
+            font-size: 0.9em;
+        }
+
+        .setting-control {
+            width: 100%;
+            padding: 8px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            font-size: 0.95em;
+            background: white;
+            transition: all 0.2s ease;
+        }
+
+        .setting-control:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+
+        input[type="range"].setting-control {
+            padding: 0;
+            height: 6px;
+            cursor: pointer;
+            appearance: none;
+            background: linear-gradient(to right, #3498db 0%, #9b59b6 100%);
+        }
+
+        input[type="range"].setting-control::-webkit-slider-thumb {
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3498db;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        input[type="range"].setting-control::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: #3498db;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            border: none;
+        }
+
+        input[type="checkbox"].setting-control {
+            width: auto;
+            margin-right: 8px;
+            cursor: pointer;
+        }
+
+        /* AI Status Display */
+        .ai-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, rgba(46, 204, 113, 0.15) 0%, rgba(26, 188, 156, 0.15) 100%);
+            border-top: 2px solid rgba(46, 204, 113, 0.3);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .status-icon {
+            font-size: 1.3em;
+            margin-right: 10px;
+            animation: rotate 3s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .status-text {
+            color: #27ae60;
+            font-weight: 600;
+            font-size: 1em;
+        }
+
+        .game-ended {
+            background: #27ae60;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 10px;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <!-- Data Loading Section -->
+    <div class="loading-section" id="loadingSection">
+        <h2>📁 Load Opening Data (Optional)</h2>
+        <div class="file-row">
+            <label>Layer 1 (Opening Book):</label>
+            <input type="file" id="layer1File" accept=".json">
+            <span id="layer1Status"></span>
+        </div>
+        <div class="file-row">
+            <label>Layer 2 (P2 Counters):</label>
+            <input type="file" id="layer2File" accept=".json">
+            <span id="layer2Status"></span>
+        </div>
+
+        <h2 style="margin-top: 25px;">⚙️ AI Configuration</h2>
+        <div style="background: #e3f2fd; border: 1px solid #2196f3; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+            <div style="font-size: 0.95em; color: #1565c0; margin-bottom: 8px;">
+                <strong>✨ Defaults:</strong> C++ WASM Engine | 20k MCTS Simulations | Minimax @10 empty hexes
+            </div>
+            <div style="font-size: 0.85em; color: #555;">
+                💡 All AI settings can be adjusted during gameplay using the settings panel below the control buttons.
+            </div>
+        </div>
+
+        <div class="select-row">
+            <label>
+                <input type="checkbox" id="useFreeOpeningCheckbox">
+                Free Opening Mode (P1 can start anywhere)
+            </label>
+        </div>
+
+        <div class="select-row">
+            <label>
+                <input type="checkbox" id="useAsymmetricTilesCheckbox">
+                Asymmetric Tiles (can have non-standard tile sets)
+            </label>
+        </div>
+
+        <div id="customTilesSection" style="margin-top: 15px; padding: 15px; background: #f0f8ff; border-radius: 8px; display: none;">
+            <h3 style="margin: 0 0 10px 0; font-size: 1.1em;">Custom Tile Values</h3>
+            <div style="margin-bottom: 10px;">
+                <label style="display: block; font-weight: 500; margin-bottom: 5px;">Player 1 Tiles (comma-separated, 1-9):</label>
+                <input type="text" id="p1CustomTiles" value="1,2,3,4,5,6,7,8,9" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd; font-family: 'JetBrains Mono', monospace;">
+                <div style="font-size: 0.85em; color: #666; margin-top: 3px;">Default: 1,2,3,4,5,6,7,8,9 (standard symmetric)</div>
+            </div>
+            <div>
+                <label style="display: block; font-weight: 500; margin-bottom: 5px;">Player 2 Tiles (comma-separated, 1-9):</label>
+                <input type="text" id="p2CustomTiles" value="1,2,3,4,5,6,7,8,9" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd; font-family: 'JetBrains Mono', monospace;">
+                <div style="font-size: 0.85em; color: #666; margin-top: 3px;">Default: 1,2,3,4,5,6,7,8,9 (standard symmetric)</div>
+            </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 20px;">
+            <button class="btn" id="startFromScratchBtn">Start from Empty Board (No Opening Theory)</button>
+        </div>
+    </div>
+
+    <!-- Opening Selection Section -->
+    <div class="selection-section" id="selectionSection">
+        <h2>🎯 Select Opening Sequence</h2>
+        <div class="select-row">
+            <label>P1 Opening:</label>
+            <select id="p1OpeningSelect">
+                <option value="">-- Select P1 Opening --</option>
+            </select>
+        </div>
+        <div class="select-row">
+            <label>P2 Counter:</label>
+            <select id="p2CounterSelect" disabled>
+                <option value="">-- Select P1 Opening First --</option>
+            </select>
+        </div>
+
+        <button class="btn" id="startGameBtn" disabled>Start New Game</button>
+    </div>
+
+    <!-- Game Container -->
+    <div class="game-container" id="gameContainer">
+        <div class="game-header">
+            <h1>Opening Sequence Visualizer</h1>
+            <div id="openingInfo" style="color: #666; font-size: 0.9em; margin-top: 5px;"></div>
+        </div>
+
+        <div class="game-layout">
+            <!-- Player 1 Panel -->
+            <div class="player-panel player1">
+                <h3>Player 1</h3>
+                <div class="score" id="p1Score">0</div>
+                <div class="tiles-info" id="p1TilesInfo">Tiles: 9 remaining</div>
+                <div class="tiles-display" id="p1TilesDisplay"></div>
+            </div>
+
+            <!-- Board -->
+            <div class="game-board-container">
+                <div class="last-move-display" id="lastMoveDisplay" style="display: none;">
+                    <div class="move-text" id="lastMoveText"></div>
+                    <div class="confidence-text" id="lastMoveConfidence"></div>
+                </div>
+                <div class="board-container">
+                    <svg id="board" viewBox="0 0 450 500"></svg>
+                </div>
+            </div>
+
+            <!-- Player 2 Panel -->
+            <div class="player-panel player2">
+                <h3>Player 2</h3>
+                <div class="score" id="p2Score">0</div>
+                <div class="tiles-info" id="p2TilesInfo">Tiles: 9 remaining</div>
+                <div class="tiles-display" id="p2TilesDisplay"></div>
+            </div>
+        </div>
+
+        <!-- Move Controls -->
+        <div class="move-controls">
+            <div class="move-history" id="moveHistory"></div>
+            <div class="control-buttons">
+                <button class="btn" id="nextMoveBtn" disabled>Make Next Move (AI)</button>
+                <button class="btn" id="undoBtn" disabled>Undo Move</button>
+                <button class="btn" id="autoPlayBtn" disabled>Auto-Play to End</button>
+                <button class="btn" id="stopAutoPlayBtn" style="display: none; background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">⏹ Stop Auto-Play</button>
+                <button class="btn" id="resetBtn">Reset</button>
+                <button class="btn" id="changeOpeningBtn">Change Opening</button>
+                <button class="btn" id="showSimulationBtn" style="background: linear-gradient(135deg, #27ae60 0%, #229954 100%);">Toggle Simulation Panel</button>
+            </div>
+
+            <!-- AI Settings Panel (Collapsible) -->
+            <div class="ai-settings-panel" id="aiSettingsPanel">
+                <div class="settings-header" onclick="toggleSettings()">
+                    <div class="settings-summary" id="settingsSummary">
+                        ⚙️ AI Settings: MCTS 20k (C++) | Minimax @10 empty (C++) | Hybrid: OFF
+                    </div>
+                    <div class="settings-toggle" id="settingsToggle">▼</div>
+                </div>
+
+                <div class="settings-content" id="settingsContent" style="display: none;">
+                    <div class="settings-grid">
+                        <!-- MCTS Settings -->
+                        <div class="settings-section">
+                            <h4>🎯 MCTS Configuration</h4>
+                            <label>Simulations per move:</label>
+                            <select id="mctsSimsLive" class="setting-control">
+                                <option value="1000">1,000 (Fast)</option>
+                                <option value="5000">5,000</option>
+                                <option value="10000">10,000</option>
+                                <option value="20000" selected>20,000 (Default)</option>
+                                <option value="50000">50,000</option>
+                                <option value="100000">100,000</option>
+                                <option value="200000">200,000</option>
+                                <option value="500000">500,000 (Slow)</option>
+                                <option value="1000000">1,000,000 (Very Slow)</option>
+                                <option value="2000000">2,000,000 (Extreme)</option>
+                            </select>
+
+                            <label style="margin-top: 10px;">Engine:</label>
+                            <select id="mctsEngineLive" class="setting-control">
+                                <option value="javascript">JavaScript (slower)</option>
+                                <option value="cpp" selected>C++ WebAssembly (36-80× faster) ⚡</option>
+                            </select>
+                        </div>
+
+                        <!-- Pure Minimax Settings -->
+                        <div class="settings-section">
+                            <h4>🎲 Pure Minimax (Endgame)</h4>
+                            <label>Switch from MCTS at <span id="minimaxThresholdValueLive">10</span> empty hexes:</label>
+                            <input type="range" id="minimaxThresholdLive" class="setting-control" min="0" max="18" value="10" step="1">
+                            <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                                0 = never use minimax, 18 = always use minimax
+                            </div>
+
+                            <label style="margin-top: 10px;">Engine:</label>
+                            <select id="minimaxEngineLive" class="setting-control">
+                                <option value="javascript">JavaScript (slower)</option>
+                                <option value="cpp" selected>C++ WebAssembly (555× faster) ⚡</option>
+                            </select>
+                        </div>
+
+                        <!-- Hybrid MCTS Settings -->
+                        <div class="settings-section">
+                            <h4>🔀 Hybrid MCTS (Minimax Rollouts)</h4>
+                            <label>
+                                <input type="checkbox" id="useMCTSMinimaxLive" class="setting-control">
+                                <strong>Enable minimax rollouts</strong> (better quality, slower)
+                            </label>
+                            <div style="font-size: 0.85em; color: #666; margin: 5px 0;">
+                                Uses minimax for endgame evaluation during MCTS simulations
+                            </div>
+
+                            <div id="mctsMinimaxThresholdRowLive" style="margin-top: 10px; display: none;">
+                                <label>Rollout threshold at <span id="mctsMinimaxThresholdValueLive">4</span> empty hexes:</label>
+                                <input type="range" id="mctsMinimaxThresholdLive" class="setting-control" min="2" max="12" value="4" step="1">
+                                <div style="font-size: 0.85em; color: #666; margin-top: 5px;">
+                                    MCTS switches to minimax evaluation at this depth (2-12 hexes)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live AI Status Display -->
+                <div class="ai-status" id="aiStatus" style="display: none;">
+                    <span class="status-icon">🤖</span>
+                    <span class="status-text" id="statusText">Thinking...</span>
+                </div>
+            </div>
+
+            <div class="game-info" id="gameInfo">Load opening data to begin</div>
+            <div id="gameEndedMsg"></div>
+        </div>
+    </div>
+
+    <!-- Simulation Container -->
+    <div class="game-container" id="simulationContainer" style="display: none; margin-top: 20px;">
+        <div class="game-header">
+            <h1>Multi-Game Simulation</h1>
+        </div>
+
+        <div style="background: rgba(255, 255, 255, 0.95); border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+            <h2>Simulation Settings</h2>
+            <div class="select-row">
+                <label>
+                    <input type="checkbox" id="exhaustiveOpeningCheckbox">
+                    <strong>Exhaustive Opening Mode</strong> (Test all P1 openings systematically)
+                </label>
+            </div>
+            <div class="select-row" id="exhaustiveSettings" style="display: none; margin-left: 20px; margin-top: 10px; padding: 10px; background: #f0f8ff; border-radius: 4px;">
+                <div id="gamesPerOpeningRow">
+                    <label>Games per opening:</label>
+                    <input type="number" id="gamesPerOpening" min="1" max="100" value="50" style="width: 80px; padding: 6px; border-radius: 4px; border: 1px solid #ddd;">
+                    <span style="margin-left: 10px; color: #666; font-size: 0.85em;">(Will test all 54 standard openings or 162 with free opening)</span>
+                </div>
+                <div id="totalGamesDisplay" style="margin-top: 10px; padding: 8px; background: #e3f2fd; border-radius: 4px; font-weight: bold; display: none;">
+                    Total games to run: <span id="totalGamesCount">0</span>
+                </div>
+                <div style="margin-top: 10px;">
+                    <label>
+                        <input type="checkbox" id="strongOpeningsOnlyCheckbox">
+                        <strong>Strong Openings Only</strong> (Test only top 5 from 250-game dataset)
+                    </label>
+                    <div id="strongOpeningsInfo" style="margin-top: 5px; padding: 8px; background: #fff3cd; border-radius: 4px; display: none; font-size: 0.85em;">
+                        Will test: <strong>h12t5, h12t6, h12t7, h6t5, h6t6</strong> (5 openings × games per opening)
+                    </div>
+                </div>
+                <div style="margin-top: 10px;">
+                    <label>
+                        <input type="checkbox" id="randomGoodOpeningsCheckbox">
+                        <strong>Random Good Openings</strong> (>50% win rate from 2700-game test)
+                    </label>
+                    <div id="randomGoodOpeningsInfo" style="margin-top: 5px; padding: 8px; background: #d1f2eb; border-radius: 4px; display: none; font-size: 0.85em;">
+                        Randomly selects from <strong>19 openings</strong>: h6t6 (72%), h11t9 (72%), h7t9 (70%), h7t8 (68%), h6t7 (66%), h6t5 (64%), h6t9 (64%), h7t6 (64%), h12t6 (64%), h12t7 (62%), h7t7 (60%), h12t5 (60%), h11t7 (58%), h4t6 (54%), h7t5 (52%), h14t4 (52%), h6t3 (50%), h11t8 (50%), h12t4 (50%)
+                    </div>
+                </div>
+                <div style="margin-top: 10px;">
+                    <label>
+                        <input type="checkbox" id="top10OpeningsCheckbox">
+                        <strong>Top 10 Promising Openings</strong> (Test best-validated openings)
+                    </label>
+                    <div id="top10OpeningsInfo" style="margin-top: 5px; padding: 8px; background: #fff3e0; border-radius: 4px; display: none; font-size: 0.85em;">
+                        Tests <strong>10 openings</strong>: h11t9 (72.4%), h7t9 (68.4%), h6t7 (66.1%), h7t8 (63.5%), h6t5 (60.7%), h7t6 (64.1%), h6t6 (67.5%), h12t6 (60.7%), h10t2 (76.5%), h10t3 (75.0%)
+                    </div>
+                </div>
+                <div style="margin-top: 10px;">
+                    <label>
+                        <input type="checkbox" id="doubleMCTSForP2Move2Checkbox">
+                        <strong>Double MCTS for P2's first response</strong> (P2 move 2 gets 2× simulations)
+                    </label>
+                    <div style="margin-top: 5px; color: #666; font-size: 0.85em;">
+                        Example: If MCTS = 15k, P2's move 2 will use 30k simulations
+                    </div>
+                </div>
+                <div style="margin-top: 10px;">
+                    <label>
+                        <input type="checkbox" id="p2LearningModeCheckbox">
+                        <strong>P2 Learns from Losses</strong> (P2 avoids responses that already lost)
+                    </label>
+                    <div style="margin-top: 5px; color: #666; font-size: 0.85em;">
+                        If P2 tries a response and loses, that response is blacklisted for the rest of the simulation
+                    </div>
+                </div>
+                <div style="margin-top: 10px;">
+                    <label>
+                        <input type="checkbox" id="mutualLearningModeCheckbox">
+                        <strong>Both Players Learn from Losses</strong> (Context-aware sequence blacklisting)
+                    </label>
+                    <div style="margin-top: 5px; color: #666; font-size: 0.85em;">
+                        Both players blacklist full 6-move sequences that led to losses. Each player learns their own moves in the context of what the opponent played. P1 won't repeat move 3 when P2 plays the same move 2, etc.
+                    </div>
+                </div>
+            </div>
+            <div class="select-row" id="normalGameCount">
+                <label>Number of Games:</label>
+                <input type="number" id="simGameCount" min="1" max="10000" value="100" style="width: 100px; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+                <span style="margin-left: 10px; color: #666; font-size: 0.9em;">(1-10000 games)</span>
+            </div>
+            <div class="select-row" style="margin-top: 15px;">
+                <label>Visual Speed:</label>
+                <select id="simSpeed" style="padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+                    <option value="0">Instant (no visualization)</option>
+                    <option value="50" selected>Fast (50ms per move)</option>
+                    <option value="100">Medium (100ms per move)</option>
+                    <option value="200">Slow (200ms per move)</option>
+                    <option value="500">Very Slow (500ms per move)</option>
+                </select>
+            </div>
+            <div style="margin-top: 15px;">
+                <button class="btn" id="startSimBtn">Run Simulation</button>
+                <button class="btn" id="cancelSimBtn" style="background: #e74c3c; display: none;">Cancel</button>
+            </div>
+        </div>
+
+        <div id="simulationResults" style="background: rgba(255, 255, 255, 0.95); border-radius: 12px; padding: 20px; display: none;">
+            <h2>Simulation Results</h2>
+            <div id="simProgress" style="font-size: 1.2em; margin-bottom: 20px; color: #569cd6;"></div>
+            <div style="margin-bottom: 15px;">
+                <button class="btn" id="downloadResultsBtn" style="background: #27ae60; display: none;">📥 Download Stats (JSON)</button>
+                <button class="btn" id="downloadResultsCSVBtn" style="background: #16a085; display: none;">📊 Download Stats (CSV)</button>
+                <button class="btn" id="downloadGameLogsBtn" style="background: #8e44ad; display: none;">📜 Download Complete Game Logs (JSON)</button>
+                <button class="btn" id="downloadExhaustiveBtn" style="background: #e67e22; display: none;">🔍 Download Exhaustive Opening Analysis</button>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+                <div style="background: #2d2d30; padding: 15px; border-radius: 8px;">
+                    <h3 style="color: #c0392b; margin-top: 0;">Player 1 Stats</h3>
+                    <div id="p1Stats"></div>
+                </div>
+                <div style="background: #2d2d30; padding: 15px; border-radius: 8px;">
+                    <h3 style="color: #2980b9; margin-top: 0;">Player 2 Stats</h3>
+                    <div id="p2Stats"></div>
+                </div>
+            </div>
+
+            <div style="background: #2d2d30; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                <h3 style="color: #4ec9b0; margin-top: 0;">Overall Statistics</h3>
+                <div id="overallStats"></div>
+            </div>
+
+            <div style="background: #2d2d30; padding: 15px; border-radius: 8px;">
+                <h3 style="color: #dcdcaa; margin-top: 0;">Opening Analysis (First 4 Moves)</h3>
+                <div id="openingStats"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="hexuki_game_engine_v2.js"></script>
+    <script src="hexuki_game_engine_free_opening.js"></script>
+    <script src="hexuki_game_engine_asymmetric.js"></script>
+    <script src="mcts_ai_player.js"></script>
+    <script src="minimax_endgame_optimized.js"></script>
+    <script src="hexuki.js"></script> <!-- C++ WASM Engine -->
+    <script>
+        let layer1Data = null;
+        let layer2Data = null;
+        let currentGame = null;
+        let currentP1Opening = null;
+        let currentP2Counter = null;
+        let moveHistory = [];
+        let mctsAI = null;
+        let minimaxSolver = null;
+        let lastSimulationStats = null; // Store latest simulation results for download
+        let completeGameLogs = []; // Store complete move-by-move game logs
+        let isAutoPlaying = false;
+
+        // AI Configuration (Defaults)
+        let mctsSims = 20000;  // 20k simulations - good balance of speed and quality
+        let minimaxThreshold = 10;  // Switch to minimax at 10 empty hexes
+        let useMinimaxEndgame = true;
+        let useMinimaxRollouts = false; // Hybrid MCTS with minimax-terminated rollouts
+        let useMCTSMinimaxRollouts = false; // Use minimax for MCTS rollout evaluation (opt-in)
+        let mctsMinimaxThreshold = 4; // Rollout threshold (when enabled)
+        let mctsEngine = 'cpp'; // 'javascript' or 'cpp'
+        let minimaxEngine = 'cpp'; // 'javascript' or 'cpp'
+        let wasmModule = null; // C++ WASM module
+
+        // Initialize C++ WASM module
+        HexukiWasm().then(function(module) {
+            wasmModule = module;
+            wasmModule.initialize();
+            console.log('✓ C++ WASM engine loaded and initialized');
+        }).catch(function(err) {
+            console.error('Failed to load C++ WASM engine:', err);
+            mctsEngine = 'javascript'; // Fallback to JavaScript
+            document.getElementById('mctsEngineSelect').value = 'javascript';
+            alert('Failed to load C++ engine. Using JavaScript instead.');
+        });
+
+        let useFreeOpening = false;
+        let useAsymmetricTiles = false;
+        let useExhaustiveOpening = false;
+        let gamesPerOpening = 50;
+        let exhaustiveOpeningStats = {}; // Track stats per opening
+        let useStrongOpeningsOnly = false;
+        let useRandomGoodOpenings = false;
+        const goodOpenings = ['h6t6', 'h11t9', 'h7t9', 'h7t8', 'h6t7', 'h6t5', 'h6t9', 'h7t6',
+                              'h12t6', 'h12t7', 'h7t7', 'h12t5', 'h11t7', 'h4t6', 'h7t5',
+                              'h14t4', 'h6t3', 'h11t8', 'h12t4'];
+        let useTop10Openings = false;
+        const top10Openings = ['h11t9', 'h7t9', 'h6t7', 'h7t8', 'h6t5', 'h7t6', 'h6t6', 'h12t6', 'h10t2', 'h10t3'];
+        let doubleMCTSForP2Move2 = false;
+        let p2ResponseBlacklist = {}; // Track P2 responses that lost for each P1 opening (or global array in random mode)
+        let useP2LearningMode = false;
+        let useMutualLearning = false;
+        let mutualBlacklist = { p1: {}, p2: {} }; // Mutual learning: track 3-move sequences for both players
+
+        // Manual move state
+        let selectedTile = null;
+        let manualMoveMode = false;
+        let currentlyFromScratch = false;
+
+        // Helper function to parse and apply custom tiles
+        function applyCustomTiles(game) {
+            const p1Input = document.getElementById('p1CustomTiles').value.trim();
+            const p2Input = document.getElementById('p2CustomTiles').value.trim();
+
+            // Parse P1 tiles
+            if (p1Input) {
+                const p1Tiles = p1Input.split(',').map(s => parseInt(s.trim())).filter(n => n >= 1 && n <= 9);
+                if (p1Tiles.length > 0) {
+                    game.player1Tiles = p1Tiles;
+                }
+            }
+
+            // Parse P2 tiles
+            if (p2Input) {
+                const p2Tiles = p2Input.split(',').map(s => parseInt(s.trim())).filter(n => n >= 1 && n <= 9);
+                if (p2Tiles.length > 0) {
+                    game.player2Tiles = p2Tiles;
+                }
+            }
+        }
+
+        // ============================================================================
+        // AI Settings Panel Functions
+        // ============================================================================
+
+        /**
+         * Toggle AI settings panel expand/collapse
+         */
+        function toggleSettings() {
+            const content = document.getElementById('settingsContent');
+            const toggle = document.getElementById('settingsToggle');
+
+            if (content.style.display === 'none') {
+                content.style.display = 'block';
+                toggle.classList.add('expanded');
+                toggle.textContent = '▲';
+            } else {
+                content.style.display = 'none';
+                toggle.classList.remove('expanded');
+                toggle.textContent = '▼';
+            }
+        }
+
+        /**
+         * Update settings summary bar to reflect current configuration
+         */
+        function updateSettingsSummary() {
+            const mctsSimsText = mctsSims >= 1000
+                ? `${(mctsSims / 1000).toFixed(0)}k`
+                : mctsSims.toString();
+
+            const mctsEngineText = mctsEngine === 'cpp' ? 'C++' : 'JS';
+            const minimaxEngineText = minimaxEngine === 'cpp' ? 'C++' : 'JS';
+
+            const hybridText = useMCTSMinimaxRollouts
+                ? `ON (rollouts @${mctsMinimaxThreshold})`
+                : 'OFF';
+
+            const summary = `⚙️ AI: MCTS ${mctsSimsText} (${mctsEngineText}) | Minimax @${minimaxThreshold} empty (${minimaxEngineText}) | Hybrid: ${hybridText}`;
+
+            document.getElementById('settingsSummary').textContent = summary;
+        }
+
+        /**
+         * Show AI status message
+         */
+        function showAIStatus(message) {
+            const statusElement = document.getElementById('aiStatus');
+            const statusText = document.getElementById('statusText');
+            statusText.textContent = message;
+            statusElement.style.display = 'flex';
+        }
+
+        /**
+         * Hide AI status message
+         */
+        function hideAIStatus() {
+            const statusElement = document.getElementById('aiStatus');
+            statusElement.style.display = 'none';
+        }
+
+        /**
+         * Stop auto-play between moves
+         */
+        function stopAutoPlay() {
+            isAutoPlaying = false;
+            console.log('Stopping auto-play...');
+
+            // Hide stop button, show auto-play button
+            document.getElementById('stopAutoPlayBtn').style.display = 'none';
+            document.getElementById('autoPlayBtn').disabled = false;
+            document.getElementById('nextMoveBtn').disabled = false;
+            document.getElementById('gameInfo').textContent =
+                `Move ${moveHistory.length + 1} - P${currentGame.currentPlayer}'s turn (auto-play stopped)`;
+        }
+
+        // File loading
+        document.getElementById('layer1File').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    layer1Data = JSON.parse(event.target.result);
+                    document.getElementById('layer1Status').innerHTML = '<span class="status">✓ Loaded</span>';
+                    populateP1Openings();
+                    checkFilesLoaded();
+                } catch (error) {
+                    alert('Error loading Layer 1 file: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        document.getElementById('layer2File').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    layer2Data = JSON.parse(event.target.result);
+                    document.getElementById('layer2Status').innerHTML = '<span class="status">✓ Loaded</span>';
+                    checkFilesLoaded();
+                } catch (error) {
+                    alert('Error loading Layer 2 file: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        function checkFilesLoaded() {
+            if (layer1Data && layer2Data) {
+                document.getElementById('selectionSection').style.display = 'block';
+            }
+        }
+
+        function populateP1Openings() {
+            const select = document.getElementById('p1OpeningSelect');
+            select.innerHTML = '<option value="">-- Select P1 Opening --</option>';
+
+            // Use top 10 from Layer 1
+            const top10 = layer1Data.openings.slice(0, 10);
+            top10.forEach((opening, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = `#${index + 1}: Hex ${opening.hex}-Tile ${opening.tile} (${(opening.winRate * 100).toFixed(1)}% Layer 1)`;
+                select.appendChild(option);
+            });
+        }
+
+        function updateTotalGamesDisplay() {
+            if (!useExhaustiveOpening) {
+                document.getElementById('totalGamesDisplay').style.display = 'none';
+                return;
+            }
+
+            let totalGames = 0;
+            let description = '';
+
+            if (useRandomGoodOpenings) {
+                // Random mode uses "Number of Games" field
+                const gameCount = parseInt(document.getElementById('simGameCount').value) || 100;
+                totalGames = gameCount;
+                description = `${totalGames} games (randomly selected from ${goodOpenings.length} good openings)`;
+            } else if (useTop10Openings) {
+                // Top 10 openings: 10 × games per opening
+                totalGames = 10 * gamesPerOpening;
+                description = `10 openings × ${gamesPerOpening} games = ${totalGames} total`;
+            } else if (useStrongOpeningsOnly) {
+                // Strong openings: 5 × games per opening
+                totalGames = 5 * gamesPerOpening;
+                description = `5 openings × ${gamesPerOpening} games = ${totalGames} total`;
+            } else {
+                // All openings: 54 × games per opening (or 162 with free opening)
+                const numOpenings = useFreeOpening ? 162 : 54;
+                totalGames = numOpenings * gamesPerOpening;
+                description = `${numOpenings} openings × ${gamesPerOpening} games = ${totalGames} total`;
+            }
+
+            document.getElementById('totalGamesCount').textContent = description;
+            document.getElementById('totalGamesDisplay').style.display = 'block';
+        }
+
+        document.getElementById('p1OpeningSelect').addEventListener('change', (e) => {
+            const index = parseInt(e.target.value);
+            if (isNaN(index)) {
+                document.getElementById('p2CounterSelect').disabled = true;
+                document.getElementById('startGameBtn').disabled = true;
+                return;
+            }
+
+            currentP1Opening = layer1Data.openings[index];
+            populateP2Counters();
+        });
+
+        function populateP2Counters() {
+            const select = document.getElementById('p2CounterSelect');
+            select.innerHTML = '<option value="">-- Select P2 Counter --</option>';
+            select.disabled = false;
+
+            // Find matching opening in Layer 2 data
+            const layer2Opening = layer2Data.parentOpenings.find(p =>
+                p.p1Move.hex === currentP1Opening.hex &&
+                p.p1Move.tile === currentP1Opening.tile
+            );
+
+            if (!layer2Opening) {
+                alert('No Layer 2 data found for this opening!');
+                return;
+            }
+
+            // Add all P2 responses
+            layer2Opening.p2Responses.forEach((response, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                const p2WinPct = (response.p2WinRate * 100).toFixed(0);
+                option.textContent = `Hex ${response.p2Move.hexId}-Tile ${response.p2Move.tileValue} (P2 wins ${p2WinPct}%)`;
+                select.appendChild(option);
+            });
+
+            // Store full Layer 2 data for later
+            currentP1Opening.layer2Data = layer2Opening;
+        }
+
+        document.getElementById('p2CounterSelect').addEventListener('change', (e) => {
+            const index = parseInt(e.target.value);
+            if (isNaN(index)) {
+                document.getElementById('startGameBtn').disabled = true;
+                return;
+            }
+
+            currentP2Counter = currentP1Opening.layer2Data.p2Responses[index];
+            document.getElementById('startGameBtn').disabled = false;
+        });
+
+        // Game Mode listeners
+        document.getElementById('useFreeOpeningCheckbox').addEventListener('change', (e) => {
+            useFreeOpening = e.target.checked;
+            updateTotalGamesDisplay();  // Update display when free opening mode changes
+        });
+
+        document.getElementById('useAsymmetricTilesCheckbox').addEventListener('change', (e) => {
+            useAsymmetricTiles = e.target.checked;
+            document.getElementById('customTilesSection').style.display = e.target.checked ? 'block' : 'none';
+        });
+
+        // ============================================================================
+        // Live AI Settings Panel Event Listeners
+        // ============================================================================
+
+        // MCTS Simulations (Live)
+        document.getElementById('mctsSimsLive').addEventListener('change', (e) => {
+            mctsSims = parseInt(e.target.value);
+            updateSettingsSummary();
+            console.log(`Updated MCTS simulations to ${mctsSims}`);
+        });
+
+        // MCTS Engine (Live)
+        document.getElementById('mctsEngineLive').addEventListener('change', (e) => {
+            mctsEngine = e.target.value;
+            updateSettingsSummary();
+            console.log(`Switched to ${mctsEngine} MCTS engine`);
+
+            // Warn if C++ engine not loaded
+            if (mctsEngine === 'cpp' && !wasmModule) {
+                alert('C++ WASM engine not loaded yet. Please wait or use JavaScript engine.');
+                e.target.value = 'javascript';
+                mctsEngine = 'javascript';
+                updateSettingsSummary();
+            }
+        });
+
+        // Minimax Threshold (Live)
+        document.getElementById('minimaxThresholdLive').addEventListener('input', (e) => {
+            minimaxThreshold = parseInt(e.target.value);
+            document.getElementById('minimaxThresholdValueLive').textContent = minimaxThreshold;
+            updateSettingsSummary();
+        });
+
+        // Minimax Engine (Live)
+        document.getElementById('minimaxEngineLive').addEventListener('change', (e) => {
+            minimaxEngine = e.target.value;
+            updateSettingsSummary();
+            console.log(`Switched to ${minimaxEngine} Minimax engine`);
+
+            // Warn if C++ engine not loaded
+            if (minimaxEngine === 'cpp' && !wasmModule) {
+                alert('C++ WASM engine not loaded yet. Please wait or use JavaScript engine.');
+                e.target.value = 'javascript';
+                minimaxEngine = 'javascript';
+                updateSettingsSummary();
+            }
+        });
+
+        // MCTS Minimax Rollouts (Live)
+        document.getElementById('useMCTSMinimaxLive').addEventListener('change', (e) => {
+            useMCTSMinimaxRollouts = e.target.checked;
+            document.getElementById('mctsMinimaxThresholdRowLive').style.display =
+                useMCTSMinimaxRollouts ? 'block' : 'none';
+            updateSettingsSummary();
+            console.log(`Hybrid MCTS (minimax rollouts): ${useMCTSMinimaxRollouts ? 'ON' : 'OFF'}`);
+        });
+
+        // MCTS Minimax Threshold (Live)
+        document.getElementById('mctsMinimaxThresholdLive').addEventListener('input', (e) => {
+            mctsMinimaxThreshold = parseInt(e.target.value);
+            document.getElementById('mctsMinimaxThresholdValueLive').textContent = mctsMinimaxThreshold;
+            updateSettingsSummary();
+        });
+
+        // Initialize settings summary on page load
+        updateSettingsSummary();
+
+        document.getElementById('exhaustiveOpeningCheckbox').addEventListener('change', (e) => {
+            useExhaustiveOpening = e.target.checked;
+            document.getElementById('exhaustiveSettings').style.display = e.target.checked ? 'block' : 'none';
+            document.getElementById('normalGameCount').style.display = e.target.checked ? 'none' : 'block';
+            updateTotalGamesDisplay();
+        });
+
+        document.getElementById('gamesPerOpening').addEventListener('change', (e) => {
+            gamesPerOpening = parseInt(e.target.value);
+            updateTotalGamesDisplay();
+        });
+
+        document.getElementById('strongOpeningsOnlyCheckbox').addEventListener('change', (e) => {
+            useStrongOpeningsOnly = e.target.checked;
+            document.getElementById('strongOpeningsInfo').style.display = e.target.checked ? 'block' : 'none';
+
+            // Mutually exclusive with random good openings
+            if (e.target.checked && useRandomGoodOpenings) {
+                document.getElementById('randomGoodOpeningsCheckbox').checked = false;
+                useRandomGoodOpenings = false;
+                document.getElementById('randomGoodOpeningsInfo').style.display = 'none';
+                document.getElementById('gamesPerOpeningRow').style.display = 'block'; // Show again
+            }
+
+            updateTotalGamesDisplay();
+        });
+
+        document.getElementById('randomGoodOpeningsCheckbox').addEventListener('change', (e) => {
+            useRandomGoodOpenings = e.target.checked;
+            document.getElementById('randomGoodOpeningsInfo').style.display = e.target.checked ? 'block' : 'none';
+
+            // Mutually exclusive with strong openings only
+            if (e.target.checked && useStrongOpeningsOnly) {
+                document.getElementById('strongOpeningsOnlyCheckbox').checked = false;
+                useStrongOpeningsOnly = false;
+                document.getElementById('strongOpeningsInfo').style.display = 'none';
+            }
+
+            // Hide "Games per opening" when Random Good Openings is checked
+            document.getElementById('gamesPerOpeningRow').style.display = e.target.checked ? 'none' : 'block';
+
+            // Update total games display
+            updateTotalGamesDisplay();
+        });
+
+        document.getElementById('simGameCount').addEventListener('change', (e) => {
+            updateTotalGamesDisplay();
+        });
+
+        document.getElementById('doubleMCTSForP2Move2Checkbox').addEventListener('change', (e) => {
+            doubleMCTSForP2Move2 = e.target.checked;
+        });
+
+        document.getElementById('top10OpeningsCheckbox').addEventListener('change', (e) => {
+            useTop10Openings = e.target.checked;
+            document.getElementById('top10OpeningsInfo').style.display = e.target.checked ? 'block' : 'none';
+
+            // Mutually exclusive with strong openings and random good openings
+            if (e.target.checked) {
+                if (useStrongOpeningsOnly) {
+                    document.getElementById('strongOpeningsOnlyCheckbox').checked = false;
+                    useStrongOpeningsOnly = false;
+                    document.getElementById('strongOpeningsInfo').style.display = 'none';
+                }
+                if (useRandomGoodOpenings) {
+                    document.getElementById('randomGoodOpeningsCheckbox').checked = false;
+                    useRandomGoodOpenings = false;
+                    document.getElementById('randomGoodOpeningsInfo').style.display = 'none';
+                    document.getElementById('gamesPerOpeningRow').style.display = 'block';
+                }
+            }
+
+            updateTotalGamesDisplay();
+        });
+
+        document.getElementById('p2LearningModeCheckbox').addEventListener('change', (e) => {
+            useP2LearningMode = e.target.checked;
+
+            // Mutually exclusive with mutual learning
+            if (e.target.checked && useMutualLearning) {
+                document.getElementById('mutualLearningModeCheckbox').checked = false;
+                useMutualLearning = false;
+            }
+        });
+
+        document.getElementById('mutualLearningModeCheckbox').addEventListener('change', (e) => {
+            useMutualLearning = e.target.checked;
+
+            // Mutually exclusive with P2-only learning
+            if (e.target.checked && useP2LearningMode) {
+                document.getElementById('p2LearningModeCheckbox').checked = false;
+                useP2LearningMode = false;
+            }
+        });
+
+        document.getElementById('startGameBtn').addEventListener('click', () => startNewGame(false));
+        document.getElementById('startFromScratchBtn').addEventListener('click', () => {
+            console.log('Start from scratch button clicked!');
+            try {
+                startNewGame(true);
+            } catch (error) {
+                console.error('Error starting game:', error);
+                alert('Error starting game: ' + error.message);
+            }
+        });
+        document.getElementById('nextMoveBtn').addEventListener('click', makeNextMove);
+        document.getElementById('undoBtn').addEventListener('click', undoMove);
+        document.getElementById('autoPlayBtn').addEventListener('click', autoPlayToEnd);
+        document.getElementById('stopAutoPlayBtn').addEventListener('click', stopAutoPlay);
+        document.getElementById('resetBtn').addEventListener('click', resetGame);
+        document.getElementById('changeOpeningBtn').addEventListener('click', changeOpening);
+
+        function startNewGame(fromScratch = false) {
+            console.log('startNewGame called with fromScratch =', fromScratch);
+
+            // Hide sections, show game
+            document.getElementById('selectionSection').style.display = 'none';
+            if (fromScratch) {
+                // Keep loading section visible when starting from scratch
+                document.getElementById('loadingSection').style.display = 'none';
+            }
+            document.getElementById('gameContainer').style.display = 'block';
+
+            // Save mode for reset
+            currentlyFromScratch = fromScratch;
+
+            // Initialize game with correct engine variant
+            if (useAsymmetricTiles) {
+                currentGame = new HexukiGameEngineAsymmetric();
+                // Apply custom tiles if specified
+                applyCustomTiles(currentGame);
+            } else if (useFreeOpening) {
+                currentGame = new HexukiGameEngineFreeOpening();
+            } else {
+                currentGame = new HexukiGameEngineV2();
+            }
+            mctsAI = new MCTSPlayer(mctsSims, null, {
+                useMinimaxRollouts: useMinimaxRollouts,
+                minimaxThreshold: minimaxThreshold
+            });
+            minimaxSolver = useMinimaxEndgame ? new MinimaxEndgameSolverOptimized(currentGame) : null;
+            moveHistory = [];
+            isAutoPlaying = false;
+
+            // Create board
+            createHexBoard();
+
+            // Hide last move display at start
+            document.getElementById('lastMoveDisplay').style.display = 'none';
+
+            // Show opening info with AI settings
+            let ruleVariant = '';
+            if (useFreeOpening) ruleVariant += '[FREE OPENING] ';
+            if (useAsymmetricTiles) ruleVariant += '[ASYMMETRIC TILES] ';
+
+            const aiInfo = useMinimaxEndgame ?
+                `MCTS: ${mctsSims} sims, Minimax at ${minimaxThreshold} empty` :
+                `MCTS: ${mctsSims} sims (no minimax)`;
+
+            if (fromScratch) {
+                // Starting from empty board - no opening theory
+                let info = `${ruleVariant}Starting from empty board | AI: ${aiInfo}`;
+                if (useAsymmetricTiles) {
+                    info += `\nP1 Tiles: [${currentGame.player1Tiles.join(', ')}]`;
+                    info += `\nP2 Tiles: [${currentGame.player2Tiles.join(', ')}]`;
+                }
+                document.getElementById('openingInfo').textContent = info;
+                updateDisplay();
+                document.getElementById('nextMoveBtn').disabled = false;
+                document.getElementById('autoPlayBtn').disabled = false;
+                document.getElementById('gameInfo').textContent = `Move 1 - P1's turn`;
+            } else {
+                // Using opening theory
+                document.getElementById('openingInfo').textContent =
+                    `P1: Hex ${currentP1Opening.hex}-Tile ${currentP1Opening.tile} | P2: Hex ${currentP2Counter.p2Move.hexId}-Tile ${currentP2Counter.p2Move.tileValue} | AI: ${aiInfo}`;
+
+                // Apply first two moves
+                applyOpeningMoves();
+
+                updateDisplay();
+                document.getElementById('nextMoveBtn').disabled = false;
+                document.getElementById('autoPlayBtn').disabled = false;
+                document.getElementById('gameInfo').textContent = `Move 3 - P1's turn`;
+            }
+        }
+
+        function applyOpeningMoves() {
+            // Move 1: P1's opening
+            currentGame.makeMove(currentP1Opening.hex, currentP1Opening.tile);
+            moveHistory.push({
+                moveNum: 1,
+                player: 1,
+                hex: currentP1Opening.hex,
+                tile: currentP1Opening.tile
+            });
+
+            // Move 2: P2's counter
+            currentGame.makeMove(currentP2Counter.p2Move.hexId, currentP2Counter.p2Move.tileValue);
+            moveHistory.push({
+                moveNum: 2,
+                player: 2,
+                hex: currentP2Counter.p2Move.hexId,
+                tile: currentP2Counter.p2Move.tileValue
+            });
+
+            // Show P2's counter as the last move
+            updateLastMoveDisplay(2, currentP2Counter.p2Move.hexId, currentP2Counter.p2Move.tileValue, null);
+        }
+
+        async function makeNextMove() {
+            if (currentGame.gameEnded) return;
+
+            // Disable buttons during computation
+            document.getElementById('nextMoveBtn').disabled = true;
+            document.getElementById('autoPlayBtn').disabled = true;
+
+            // Check if we should use minimax
+            const emptyHexes = currentGame.board.filter(h => h.value === null).length;
+            const useMinimax = useMinimaxEndgame && minimaxSolver && emptyHexes <= minimaxThreshold;
+
+            // Show AI status in both places
+            let statusMsg;
+            if (useMinimax) {
+                const engineText = minimaxEngine === 'cpp' ? 'C++' : 'JavaScript';
+                statusMsg = `Using ${engineText} Minimax (${emptyHexes} empty hexes remaining)`;
+                document.getElementById('gameInfo').textContent = `AI thinking... (Minimax - ${emptyHexes} empty)`;
+            } else {
+                const engineText = mctsEngine === 'cpp' ? 'C++' : 'JavaScript';
+                const simsText = mctsSims >= 1000 ? `${(mctsSims / 1000).toFixed(0)}k` : mctsSims;
+
+                if (useMCTSMinimaxRollouts) {
+                    statusMsg = `Using Hybrid ${engineText} MCTS (${simsText} sims, minimax rollouts @${mctsMinimaxThreshold} empty)`;
+                } else {
+                    statusMsg = `Using ${engineText} MCTS (${simsText} simulations)`;
+                }
+
+                document.getElementById('gameInfo').textContent = `AI thinking... (MCTS - ${mctsSims} sims)`;
+            }
+
+            showAIStatus(statusMsg);
+
+            // Use timeout to let UI update
+            await sleep(100);
+
+            // Get AI move with chunked processing to avoid blocking
+            let result;
+            if (useMinimax) {
+                result = runMinimax(currentGame, 20);
+
+                // Log predicted outcome if both players play perfectly
+                if (result.score !== undefined) {
+                    const currentScores = currentGame.calculateScores();
+                    const currentPlayer = currentGame.currentPlayer;
+                    const minimaxScore = result.score;
+
+                    // Minimax score is differential from current player's perspective
+                    // Positive = current player winning, Negative = current player losing
+
+                    // Convert differential to P1's perspective for clarity
+                    let differentialFromP1;
+                    if (currentPlayer === 1) {
+                        differentialFromP1 = minimaxScore;  // Already P1's perspective
+                    } else {
+                        differentialFromP1 = -minimaxScore; // Invert from P2's perspective
+                    }
+
+                    console.log('=== MINIMAX PREDICTION (Perfect Play) ===');
+                    console.log(`Current Scores: P1: ${currentScores.player1} | P2: ${currentScores.player2}`);
+                    console.log(`EXACT Final Differential: ${differentialFromP1 > 0 ? 'P1 +' : 'P2 +'}${Math.abs(differentialFromP1)} points`);
+
+                    if (differentialFromP1 > 0) {
+                        console.log(`🏆 P1 WINS by exactly ${differentialFromP1} points (deterministic)`);
+                    } else if (differentialFromP1 < 0) {
+                        console.log(`🏆 P2 WINS by exactly ${Math.abs(differentialFromP1)} points (deterministic)`);
+                    } else {
+                        console.log(`🤝 EXACT DRAW (both players tie)`);
+                    }
+
+                    const remainingTiles = currentGame.player1Tiles.length + currentGame.player2Tiles.length;
+                    const emptyHexes = currentGame.board.filter(h => h.value === null).length;
+                    console.log(`Game state: ${emptyHexes} empty hexes, ${remainingTiles} tiles remaining`);
+                    console.log(`This outcome is GUARANTEED with perfect play from both sides`);
+                    console.log('=======================================');
+                }
+            } else {
+                // Run MCTS in chunks to prevent browser "unresponsive script" warning
+                result = await runMCTSChunked(currentGame, mctsSims);
+            }
+
+            const movingPlayer = currentGame.currentPlayer;
+            currentGame.makeMove(result.move.hexId, result.move.tileValue);
+
+            moveHistory.push({
+                moveNum: moveHistory.length + 1,
+                player: movingPlayer, // Player who just moved
+                hex: result.move.hexId,
+                tile: result.move.tileValue
+            });
+
+            // Update last move display with confidence if available
+            const confidence = (result.winRate !== undefined && result.visits !== undefined)
+                ? { winRate: result.winRate, visits: result.visits }
+                : null;
+
+            // DEBUG: Log full MCTS result
+            console.log('MCTS Result:', {
+                move: result.move,
+                visits: result.visits,
+                winRate: result.winRate,
+                simulations: result.simulations,
+                simsRequested: mctsSims
+            });
+
+            updateLastMoveDisplay(movingPlayer, result.move.hexId, result.move.tileValue, confidence);
+
+            updateDisplay();
+
+            // Hide AI status after move completes
+            hideAIStatus();
+
+            if (currentGame.gameEnded) {
+                handleGameEnd();
+            } else {
+                document.getElementById('nextMoveBtn').disabled = false;
+                document.getElementById('undoBtn').disabled = false;
+                document.getElementById('autoPlayBtn').disabled = false;
+                const nextPlayer = currentGame.currentPlayer;
+                document.getElementById('gameInfo').textContent =
+                    `Move ${moveHistory.length + 1} - P${nextPlayer}'s turn`;
+            }
+        }
+
+        async function autoPlayToEnd() {
+            isAutoPlaying = true;
+            document.getElementById('nextMoveBtn').disabled = true;
+            document.getElementById('autoPlayBtn').style.display = 'none';
+            document.getElementById('stopAutoPlayBtn').style.display = 'inline-block';
+
+            while (!currentGame.gameEnded && isAutoPlaying) {
+                await makeNextMove();
+                await sleep(500); // Delay between moves
+            }
+
+            isAutoPlaying = false;
+
+            // Restore buttons after auto-play ends
+            document.getElementById('autoPlayBtn').style.display = 'inline-block';
+            document.getElementById('stopAutoPlayBtn').style.display = 'none';
+        }
+
+        function handleGameEnd() {
+            const scores = currentGame.calculateScores();
+            const winner = scores.player1 > scores.player2 ? 1 :
+                          scores.player2 > scores.player1 ? 2 : 0;
+
+            let msg = '';
+            if (winner === 0) {
+                msg = `Game Over - DRAW! P1: ${scores.player1}, P2: ${scores.player2}`;
+            } else {
+                msg = `Game Over - Player ${winner} Wins! P1: ${scores.player1}, P2: ${scores.player2}`;
+            }
+
+            // Log final scores to console
+            const differential = scores.player1 - scores.player2;
+            console.log(`\n${'='.repeat(50)}`);
+            console.log(`🏁 GAME OVER - FINAL RESULT`);
+            console.log(`${'='.repeat(50)}`);
+            console.log(`P1 Final Score: ${scores.player1}`);
+            console.log(`P2 Final Score: ${scores.player2}`);
+            console.log(`Differential: ${differential > 0 ? 'P1' : differential < 0 ? 'P2' : 'DRAW'} ${differential !== 0 ? Math.abs(differential) : ''}`);
+            if (winner === 0) {
+                console.log(`Result: DRAW`);
+            } else {
+                console.log(`Winner: Player ${winner} by ${Math.abs(differential)} points`);
+            }
+            console.log(`${'='.repeat(50)}\n`);
+
+            document.getElementById('gameEndedMsg').innerHTML = `<div class="game-ended">${msg}</div>`;
+            document.getElementById('nextMoveBtn').disabled = true;
+            // Keep undo enabled so you can step back from game end
+            // document.getElementById('undoBtn').disabled = true;
+            document.getElementById('autoPlayBtn').disabled = true;
+            document.getElementById('gameInfo').textContent = 'Game finished';
+        }
+
+        function resetGame() {
+            startNewGame(currentlyFromScratch);
+            document.getElementById('gameEndedMsg').innerHTML = '';
+        }
+
+        function changeOpening() {
+            document.getElementById('loadingSection').style.display = 'block';
+            if (layer1Data && layer2Data) {
+                document.getElementById('selectionSection').style.display = 'block';
+            } else {
+                document.getElementById('selectionSection').style.display = 'none';
+            }
+            document.getElementById('gameContainer').style.display = 'none';
+        }
+
+        function updateLastMoveDisplay(player, hexId, tileValue, confidence = null) {
+            const display = document.getElementById('lastMoveDisplay');
+            const moveText = document.getElementById('lastMoveText');
+            const confidenceText = document.getElementById('lastMoveConfidence');
+
+            // Update move text with hex ID format
+            moveText.textContent = `P${player} played H(${hexId})+${tileValue}`;
+
+            // Update confidence text if provided (MCTS move)
+            if (confidence !== null) {
+                const winRate = (confidence.winRate * 100).toFixed(1);
+                const visits = confidence.visits.toLocaleString();
+                confidenceText.textContent = `MCTS: ${winRate}% confidence (${visits} visits)`;
+                confidenceText.style.display = 'block';
+            } else {
+                confidenceText.style.display = 'none';
+            }
+
+            // Update player-specific styling
+            display.className = 'last-move-display';
+            display.classList.add(`player${player}`);
+            display.style.display = 'flex';
+        }
+
+        function updateDisplay() {
+            // Update board
+            updateHexBoard();
+
+            // Update scores
+            const scores = currentGame.calculateScores();
+            document.getElementById('p1Score').textContent = scores.player1;
+            document.getElementById('p2Score').textContent = scores.player2;
+
+            // Update tiles remaining
+            document.getElementById('p1TilesInfo').textContent =
+                `Tiles: ${currentGame.player1Tiles.length} remaining`;
+            document.getElementById('p2TilesInfo').textContent =
+                `Tiles: ${currentGame.player2Tiles.length} remaining`;
+
+            // Update tiles display
+            updateTilesDisplay();
+
+            // Update move history
+            updateMoveHistory();
+        }
+
+        function updateTilesDisplay() {
+            // Get all tiles (both used and unused) for each player
+            // In asymmetric mode, we need to track which tiles were initially available
+            const p1AllTiles = [...new Set([...currentGame.player1Tiles, ...Array.from({length: 9}, (_, i) => i + 1)])];
+            const p2AllTiles = [...new Set([...currentGame.player2Tiles, ...Array.from({length: 9}, (_, i) => i + 1)])];
+
+            // For asymmetric games, only show tiles that are in the player's actual tile set
+            if (useAsymmetricTiles) {
+                // Update P1 tiles - show actual remaining tiles (handles duplicates)
+                const p1Display = document.getElementById('p1TilesDisplay');
+                p1Display.innerHTML = '';
+                currentGame.player1Tiles.forEach((tileValue, idx) => {
+                    const chip = document.createElement('div');
+                    chip.className = 'tile-chip';
+                    chip.textContent = tileValue;
+                    // Add click listener for available tiles
+                    chip.addEventListener('click', () => onTileClick(tileValue, 1));
+                    if (selectedTile === tileValue && currentGame.currentPlayer === 1) {
+                        chip.classList.add('selected');
+                    }
+                    p1Display.appendChild(chip);
+                });
+
+                // Update P2 tiles - show actual remaining tiles (handles duplicates)
+                const p2Display = document.getElementById('p2TilesDisplay');
+                p2Display.innerHTML = '';
+                currentGame.player2Tiles.forEach((tileValue, idx) => {
+                    const chip = document.createElement('div');
+                    chip.className = 'tile-chip';
+                    chip.textContent = tileValue;
+                    // Add click listener for available tiles
+                    chip.addEventListener('click', () => onTileClick(tileValue, 2));
+                    if (selectedTile === tileValue && currentGame.currentPlayer === 2) {
+                        chip.classList.add('selected');
+                    }
+                    p2Display.appendChild(chip);
+                });
+            } else {
+                // Standard mode - show tiles 1-9
+                // Update P1 tiles
+                const p1Display = document.getElementById('p1TilesDisplay');
+                p1Display.innerHTML = '';
+                for (let i = 1; i <= 9; i++) {
+                    const chip = document.createElement('div');
+                    chip.className = 'tile-chip';
+                    chip.textContent = i;
+                    if (!currentGame.player1Tiles.includes(i)) {
+                        chip.classList.add('used');
+                    } else {
+                        // Add click listener for available tiles
+                        chip.addEventListener('click', () => onTileClick(i, 1));
+                        if (selectedTile === i && currentGame.currentPlayer === 1) {
+                            chip.classList.add('selected');
+                        }
+                    }
+                    p1Display.appendChild(chip);
+                }
+
+                // Update P2 tiles
+                const p2Display = document.getElementById('p2TilesDisplay');
+                p2Display.innerHTML = '';
+                for (let i = 1; i <= 9; i++) {
+                    const chip = document.createElement('div');
+                    chip.className = 'tile-chip';
+                    chip.textContent = i;
+                    if (!currentGame.player2Tiles.includes(i)) {
+                        chip.classList.add('used');
+                    } else {
+                        // Add click listener for available tiles
+                        chip.addEventListener('click', () => onTileClick(i, 2));
+                        if (selectedTile === i && currentGame.currentPlayer === 2) {
+                            chip.classList.add('selected');
+                        }
+                    }
+                    p2Display.appendChild(chip);
+                }
+            }
+        }
+
+        function updateMoveHistory() {
+            const historyDiv = document.getElementById('moveHistory');
+            historyDiv.innerHTML = '';
+
+            moveHistory.forEach((move, index) => {
+                const div = document.createElement('div');
+                div.className = `move-entry player${move.player}`;
+                if (index === moveHistory.length - 1) {
+                    div.classList.add('current');
+                }
+                div.textContent = `${move.moveNum}. P${move.player}: Hex ${move.hex}-Tile ${move.tile}`;
+                historyDiv.appendChild(div);
+            });
+
+            // Scroll to bottom
+            historyDiv.scrollTop = historyDiv.scrollHeight;
+        }
+
+        function createHexBoard() {
+            const svg = document.getElementById('board');
+            svg.innerHTML = '';
+
+            const hexSize = 35;
+            const hexWidth = hexSize * 2;
+            const hexHeight = Math.sqrt(3) * hexSize;
+            const centerX = 225;
+            const centerY = 250;
+
+            // Hex positions (exact layout from ANTISYMMETRY_TEST)
+            const hexPositions = [
+                {id: 0, x: centerX, y: centerY - hexHeight * 2},
+                {id: 1, x: centerX - hexWidth * 0.75, y: centerY - hexHeight * 1.5},
+                {id: 2, x: centerX + hexWidth * 0.75, y: centerY - hexHeight * 1.5},
+                {id: 3, x: centerX - hexWidth * 1.5, y: centerY - hexHeight},
+                {id: 4, x: centerX, y: centerY - hexHeight},
+                {id: 5, x: centerX + hexWidth * 1.5, y: centerY - hexHeight},
+                {id: 6, x: centerX - hexWidth * 0.75, y: centerY - hexHeight * 0.5},
+                {id: 7, x: centerX + hexWidth * 0.75, y: centerY - hexHeight * 0.5},
+                {id: 8, x: centerX - hexWidth * 1.5, y: centerY},
+                {id: 9, x: centerX, y: centerY},
+                {id: 10, x: centerX + hexWidth * 1.5, y: centerY},
+                {id: 11, x: centerX - hexWidth * 0.75, y: centerY + hexHeight * 0.5},
+                {id: 12, x: centerX + hexWidth * 0.75, y: centerY + hexHeight * 0.5},
+                {id: 13, x: centerX - hexWidth * 1.5, y: centerY + hexHeight},
+                {id: 14, x: centerX, y: centerY + hexHeight},
+                {id: 15, x: centerX + hexWidth * 1.5, y: centerY + hexHeight},
+                {id: 16, x: centerX - hexWidth * 0.75, y: centerY + hexHeight * 1.5},
+                {id: 17, x: centerX + hexWidth * 0.75, y: centerY + hexHeight * 1.5},
+                {id: 18, x: centerX, y: centerY + hexHeight * 2}
+            ];
+
+            hexPositions.forEach(pos => {
+                const x = pos.x;
+                const y = pos.y;
+
+                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                g.setAttribute('class', 'hex empty');
+                g.setAttribute('data-hex-id', pos.id);
+
+                // Add click listener for hex
+                g.addEventListener('click', () => onHexClick(pos.id));
+
+                // Hexagon points
+                const points = [];
+                for (let i = 0; i < 6; i++) {
+                    const angle = (Math.PI / 3) * i;
+                    const px = x + hexSize * Math.cos(angle);
+                    const py = y + hexSize * Math.sin(angle);
+                    points.push(`${px},${py}`);
+                }
+
+                const polygon = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                polygon.setAttribute('points', points.join(' '));
+                g.appendChild(polygon);
+
+                // Hex ID
+                const idText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                idText.setAttribute('x', x);
+                idText.setAttribute('y', y - 15);
+                idText.setAttribute('text-anchor', 'middle');
+                idText.setAttribute('class', 'hex-id');
+                idText.textContent = pos.id;
+                g.appendChild(idText);
+
+                // Tile value (initially empty)
+                const valueText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                valueText.setAttribute('x', x);
+                valueText.setAttribute('y', y + 10);
+                valueText.setAttribute('text-anchor', 'middle');
+                valueText.setAttribute('class', 'hex-text');
+                valueText.textContent = '';
+                g.appendChild(valueText);
+
+                svg.appendChild(g);
+            });
+        }
+
+        function updateHexBoard() {
+            currentGame.board.forEach((hex, index) => {
+                const g = document.querySelector(`[data-hex-id="${index}"]`);
+                if (!g) return;
+
+                const valueText = g.querySelector('.hex-text');
+
+                if (hex.value !== null) {
+                    g.classList.remove('empty');
+                    g.classList.add(hex.owner);
+                    valueText.textContent = hex.value;
+                    valueText.classList.add(hex.owner);
+                } else {
+                    g.classList.add('empty');
+                    g.classList.remove('player1', 'player2');
+                    valueText.textContent = '';
+                    valueText.classList.remove('player1', 'player2');
+                }
+            });
+        }
+
+        function undoMove() {
+            // Can't undo if we're at or before the opening moves (first 2 moves)
+            // Exception: if starting from scratch, can undo to move 0
+            const minMoves = currentlyFromScratch ? 0 : 2;
+            if (moveHistory.length <= minMoves) return;
+
+            // Get the last move
+            const lastMove = moveHistory[moveHistory.length - 1];
+
+            // Recreate the game state with correct engine type
+            if (useAsymmetricTiles) {
+                currentGame = new HexukiGameEngineAsymmetric();
+                // Reapply custom tiles from input fields
+                applyCustomTiles(currentGame);
+            } else if (useFreeOpening) {
+                currentGame = new HexukiGameEngineFreeOpening();
+            } else {
+                currentGame = new HexukiGameEngineV2();
+            }
+
+            mctsAI = new MCTSPlayer(mctsSims, null, {
+                useMinimaxRollouts: useMinimaxRollouts,
+                minimaxThreshold: minimaxThreshold
+            });
+            minimaxSolver = useMinimaxEndgame ? new MinimaxEndgameSolverOptimized(currentGame) : null;
+
+            // Remove last move from history
+            moveHistory.pop();
+
+            // Replay all remaining moves
+            moveHistory.forEach(move => {
+                currentGame.makeMove(move.hex, move.tile);
+            });
+
+            // Clear selection
+            selectedTile = null;
+            clearValidMoves();
+
+            // Update display
+            updateDisplay();
+            document.getElementById('gameEndedMsg').innerHTML = '';
+
+            // Update last move display to show the new last move (or hide if none)
+            if (moveHistory.length > 0) {
+                const lastMove = moveHistory[moveHistory.length - 1];
+                updateLastMoveDisplay(lastMove.player, lastMove.hex, lastMove.tile, null);
+            } else {
+                // No moves left, hide the display
+                document.getElementById('lastMoveDisplay').style.display = 'none';
+            }
+
+            // Update buttons
+            document.getElementById('nextMoveBtn').disabled = false;
+            document.getElementById('autoPlayBtn').disabled = false;
+            document.getElementById('undoBtn').disabled = moveHistory.length <= minMoves;
+
+            const nextPlayer = currentGame.currentPlayer;
+            document.getElementById('gameInfo').textContent =
+                `Move ${moveHistory.length + 1} - P${nextPlayer}'s turn`;
+        }
+
+        function onTileClick(tileValue, player) {
+            // Only allow clicking tiles for the current player during their turn
+            if (currentGame.gameEnded || player !== currentGame.currentPlayer) return;
+
+            const tiles = player === 1 ? currentGame.player1Tiles : currentGame.player2Tiles;
+            if (!tiles.includes(tileValue)) return; // Tile already used
+
+            // Toggle selection
+            if (selectedTile === tileValue) {
+                selectedTile = null;
+                clearValidMoves();
+            } else {
+                selectedTile = tileValue;
+                showValidMoves();
+            }
+
+            updateTilesDisplay();
+        }
+
+        function onHexClick(hexId) {
+            if (currentGame.gameEnded || selectedTile === null) return;
+
+            // Check if this is a valid move
+            const hex = currentGame.board[hexId];
+            if (hex.value !== null) return; // Hex already occupied
+
+            // Verify move is valid according to game rules
+            const validMoves = currentGame.getAllValidMoves();
+            const isValid = validMoves.some(m => m.hexId === hexId && m.tileValue === selectedTile);
+
+            if (!isValid) return;
+
+            // Make the move
+            const player = currentGame.currentPlayer;
+            currentGame.makeMove(hexId, selectedTile);
+
+            moveHistory.push({
+                moveNum: moveHistory.length + 1,
+                player: player,
+                hex: hexId,
+                tile: selectedTile
+            });
+
+            // Update last move display (no confidence for human moves)
+            updateLastMoveDisplay(player, hexId, selectedTile, null);
+
+            // Clear selection
+            selectedTile = null;
+            clearValidMoves();
+
+            // Update display
+            updateDisplay();
+
+            // Update undo button
+            document.getElementById('undoBtn').disabled = false;
+
+            // Check if game ended
+            if (currentGame.gameEnded) {
+                handleGameEnd();
+            } else {
+                const nextPlayer = currentGame.currentPlayer;
+                document.getElementById('gameInfo').textContent =
+                    `Move ${moveHistory.length + 1} - P${nextPlayer}'s turn`;
+            }
+        }
+
+        function showValidMoves() {
+            if (selectedTile === null) return;
+
+            const validMoves = currentGame.getAllValidMoves();
+            const validHexIds = validMoves
+                .filter(m => m.tileValue === selectedTile)
+                .map(m => m.hexId);
+
+            validHexIds.forEach(hexId => {
+                const g = document.querySelector(`[data-hex-id="${hexId}"]`);
+                if (g) g.classList.add('valid-move');
+            });
+        }
+
+        function clearValidMoves() {
+            document.querySelectorAll('.hex.valid-move').forEach(g => {
+                g.classList.remove('valid-move');
+            });
+        }
+
+        /**
+         * Run Minimax
+         * Routes to either JavaScript or C++ WASM engine based on minimaxEngine setting
+         */
+        function runMinimax(game, depth = 20, jsMinimax = null) {
+            // Use C++ WASM engine if selected and available (now supports asymmetric tiles!)
+            if (minimaxEngine === 'cpp' && wasmModule) {
+                // Convert game state to C++ format
+                const position = gameToPositionString(game);
+                wasmModule.loadPosition(position);
+
+                // Run C++ Minimax
+                const resultJson = wasmModule.minimaxFindBestMove(depth, 30000);
+                const result = JSON.parse(resultJson);
+
+                // Debug: Log minimax search stats
+                console.log(`⚡ C++ WASM Minimax: depth=${result.depth}, nodes=${result.nodes}, score=${result.score}, time=${result.timeMs?.toFixed(0)}ms`);
+
+                // Return in format expected by caller: { move: { hexId, tileValue } }
+                return {
+                    move: {
+                        hexId: result.hexId,
+                        tileValue: result.tileValue
+                    },
+                    score: result.score,
+                    depth: result.depth,
+                    nodes: result.nodes
+                };
+            } else {
+                // Use JavaScript Minimax
+                console.log(`🐌 JavaScript Minimax: running...`);
+                const solver = jsMinimax || minimaxSolver;
+                const result = solver.getBestMove(game);
+                console.log(`🐌 JavaScript Minimax: completed`);
+                return result;
+            }
+        }
+
+        /**
+         * Convert JavaScript game state to C++ position string format
+         * Format: "h9:1,h6:5|p1:2,4,8|p2:6,7,9|turn:1"
+         */
+        function gameToPositionString(game) {
+            // Build hex placements (e.g., "h9:1,h6:5")
+            const hexPlacements = [];
+            for (const hex of game.board) {
+                if (hex.value !== null) {
+                    hexPlacements.push(`h${hex.id}:${hex.value}`);
+                }
+            }
+
+            // Build player tiles (e.g., "p1:2,4,8")
+            const p1Tiles = game.player1Tiles.join(',');
+            const p2Tiles = game.player2Tiles.join(',');
+
+            // Combine into position string
+            const position = `${hexPlacements.join(',')}|p1:${p1Tiles}|p2:${p2Tiles}|turn:${game.currentPlayer}`;
+            return position;
+        }
+
+        /**
+         * Run MCTS with progress updates
+         * Routes to either JavaScript or C++ WASM engine based on mctsEngine setting
+         * Note: May show browser "wait" dialog for high simulation counts (10k+)
+         * This is normal - just click "Wait" to let it finish
+         *
+         * Cancellation: Both engines run synchronously, so cancellation is checked
+         * AFTER computation completes. The move won't be applied if cancelled.
+         * For very large sim counts, you must wait for completion before cancel takes effect.
+         */
+        async function runMCTSChunked(game, totalSims, aiPlayer = null) {
+            // Use C++ WASM engine if selected and available (now supports asymmetric tiles!)
+            if (mctsEngine === 'cpp' && wasmModule) {
+                console.log(`⚡ C++ WASM MCTS: running ${totalSims.toLocaleString()} simulations...`);
+
+                // Convert game state to C++ format
+                const position = gameToPositionString(game);
+                wasmModule.loadPosition(position);
+
+                // Run C++ MCTS with exact simulation count requested
+                // Parameters: (simulations, timeLimitMs, useTimeLimit, useMinimaxRollouts, minimaxThreshold)
+                const resultJson = wasmModule.mctsFindBestMove(totalSims, 0, false, useMCTSMinimaxRollouts, mctsMinimaxThreshold);
+                const result = JSON.parse(resultJson);
+
+                // DEBUG: Log top 10 moves to see visit distribution
+                if (result.topMoves && result.topMoves.length > 0) {
+                    console.log('=== C++ MCTS Top 10 Moves ===');
+                    result.topMoves.slice(0, 10).forEach((m, i) => {
+                        console.log(`  #${i+1}: H(${m.hexId})+${m.tileValue} | ${m.visits.toLocaleString()} visits | ${(m.winRate * 100).toFixed(1)}% win rate`);
+                    });
+                    console.log('==============================');
+                }
+
+                // Return in format expected by caller: { move: { hexId, tileValue } }
+                return {
+                    move: {
+                        hexId: result.hexId,
+                        tileValue: result.tileValue
+                    },
+                    visits: result.visits,
+                    winRate: result.winRate,
+                    simulations: result.simulations
+                };
+            } else {
+                // Use JavaScript MCTS
+                console.log(`🐌 JavaScript MCTS: running ${totalSims.toLocaleString()} simulations...`);
+                const ai = aiPlayer || mctsAI;
+
+                // Run in chunks to prevent browser freezing
+                const chunkSize = 100; // Process 100 sims at a time
+                if (totalSims <= 1000) {
+                    // Small sim count - just run it
+                    const result = await ai.getBestMove(game);
+                    console.log(`🐌 JavaScript MCTS: completed`);
+                    return result;
+                } else {
+                    // Large sim count - chunk it
+                    // For now, just run normally with periodic yields
+                    await sleep(0); // Yield to browser
+                    const result = await ai.getBestMove(game);
+                    console.log(`🐌 JavaScript MCTS: completed`);
+                    return result;
+                }
+            }
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // Simulation functionality
+        let simulationCancelled = false;
+
+        document.getElementById('showSimulationBtn').addEventListener('click', () => {
+            // Toggle simulation panel visibility
+            const simPanel = document.getElementById('simulationContainer');
+            if (simPanel.style.display === 'none') {
+                simPanel.style.display = 'block';
+                document.getElementById('simulationResults').style.display = 'none';
+            } else {
+                simPanel.style.display = 'none';
+            }
+        });
+
+        document.getElementById('startSimBtn').addEventListener('click', runSimulation);
+        document.getElementById('cancelSimBtn').addEventListener('click', () => {
+            simulationCancelled = true;
+        });
+
+        async function runSimulation() {
+            const gameCount = parseInt(document.getElementById('simGameCount').value);
+            if (gameCount < 1 || gameCount > 1000) {
+                alert('Please enter a number between 1 and 1000');
+                return;
+            }
+
+            // Get visual speed setting
+            const visualSpeed = parseInt(document.getElementById('simSpeed').value);
+
+            // Reset P2 response blacklist for new simulation
+            p2ResponseBlacklist = {};
+
+            // Reset mutual learning blacklist for new simulation
+            mutualBlacklist = { p1: {}, p2: {} };
+
+            // Show results panel and disable controls
+            document.getElementById('simulationResults').style.display = 'block';
+            document.getElementById('startSimBtn').disabled = true;
+            document.getElementById('cancelSimBtn').style.display = 'inline-block';
+            simulationCancelled = false;
+
+            // Initialize complete game logs
+            completeGameLogs = [];
+
+            // Initialize statistics
+            const stats = {
+                p1Wins: 0,
+                p2Wins: 0,
+                draws: 0,
+                p1TotalScore: 0,
+                p2TotalScore: 0,
+                scoreDiffs: [],
+                openings: {}, // Track first 4 moves
+                move1Stats: {}, // P1's opening move
+                move2Stats: {}, // P2's first move
+                move3Stats: {}, // P1's second move
+                move4Stats: {}, // P2's second move
+                // Conditional move tracking (counter-move analysis)
+                conditionalMoves: {
+                    move2GivenMove1: {}, // P2's response to each P1 opening
+                    move3GivenMove1And2: {}, // P1's move 3 given opening sequence
+                    move4GivenMove1To3: {} // P2's move 4 given first 3 moves
+                },
+                // Board state pattern tracking
+                boardSnapshots: {
+                    move3: { p1Wins: [], p2Wins: [] },
+                    move6: { p1Wins: [], p2Wins: [] },
+                    move9: { p1Wins: [], p2Wins: [] },
+                    move12: { p1Wins: [], p2Wins: [] },
+                    move15: { p1Wins: [], p2Wins: [] }
+                },
+                spatialPatterns: {
+                    centerFirst: { count: 0, p1Wins: 0, p2Wins: 0 }, // Center filled before edges
+                    edgeFirst: { count: 0, p1Wins: 0, p2Wins: 0 },   // Edges filled before center
+                    balanced: { count: 0, p1Wins: 0, p2Wins: 0 }     // Mixed approach
+                },
+                hexOccupancy: Array(19).fill(0).map(() => ({
+                    total: 0,
+                    p1Wins: 0,
+                    p2Wins: 0,
+                    avgMoveNumber: 0,
+                    totalMoveNumber: 0
+                }))
+            };
+
+            const startTime = Date.now();
+
+            // EXHAUSTIVE OPENING MODE: Generate all valid P1 openings
+            let allP1Openings = [];
+            let totalGamesToRun = gameCount;
+
+            if (useExhaustiveOpening) {
+                // Get all valid P1 opening moves
+                const testGame = useFreeOpening ? new HexukiGameEngineFreeOpening() : new HexukiGameEngineV2();
+                const validFirstMoves = testGame.getAllValidMoves();
+
+                // Create list of all opening positions
+                allP1Openings = validFirstMoves.map(m => ({
+                    hexId: m.hexId,
+                    tileValue: m.tileValue,
+                    key: `h${m.hexId}t${m.tileValue}`
+                }));
+
+                // Filter for strong openings only if checkbox is checked
+                if (useTop10Openings) {
+                    // Top 10 promising openings mode
+                    allP1Openings = allP1Openings.filter(opening => top10Openings.includes(opening.key));
+                    console.log(`Top 10 openings mode: Testing ${allP1Openings.length} openings:`, allP1Openings.map(o => o.key).join(', '));
+                } else if (useStrongOpeningsOnly) {
+                    const strongOpenings = ['h12t5', 'h12t6', 'h12t7', 'h6t5', 'h6t6'];
+                    allP1Openings = allP1Openings.filter(opening => strongOpenings.includes(opening.key));
+                    console.log(`Strong openings mode: Testing only ${allP1Openings.length} openings:`, allP1Openings.map(o => o.key).join(', '));
+                } else if (useRandomGoodOpenings) {
+                    // Random good openings mode: filter to only good openings from 2700-game test
+                    allP1Openings = allP1Openings.filter(opening => goodOpenings.includes(opening.key));
+                    console.log(`Random good openings mode: ${allP1Openings.length} openings available:`, allP1Openings.map(o => o.key).join(', '));
+                }
+
+                totalGamesToRun = useRandomGoodOpenings ? gameCount : (allP1Openings.length * gamesPerOpening);
+
+                // Initialize per-opening stats
+                allP1Openings.forEach(opening => {
+                    exhaustiveOpeningStats[opening.key] = {
+                        hexId: opening.hexId,
+                        tileValue: opening.tileValue,
+                        games: 0,
+                        p1Wins: 0,
+                        p2Wins: 0,
+                        draws: 0,
+                        p1TotalScore: 0,
+                        p2TotalScore: 0,
+                        avgScoreDiff: 0,
+                        move2Responses: {}, // Track P2's most common responses
+                        move3Choices: {}    // Track P1's most common move 3
+                    };
+                });
+
+                console.log(`Exhaustive mode: Testing ${allP1Openings.length} openings × ${gamesPerOpening} games = ${totalGamesToRun} total games`);
+            }
+
+            // Run games
+            let currentOpeningIndex = 0;
+            let gamesForCurrentOpening = 0;
+
+            for (let gameNum = 1; gameNum <= totalGamesToRun; gameNum++) {
+                if (simulationCancelled) {
+                    document.getElementById('simProgress').textContent = 'Simulation cancelled';
+                    break;
+                }
+
+                // Get forced first move if in exhaustive mode
+                let forcedFirstMove = null;
+                if (useExhaustiveOpening) {
+                    if (useRandomGoodOpenings) {
+                        // Random selection from good openings
+                        const randomIndex = Math.floor(Math.random() * allP1Openings.length);
+                        forcedFirstMove = allP1Openings[randomIndex];
+                    } else {
+                        // Exhaustive mode (systematic testing)
+                        forcedFirstMove = allP1Openings[currentOpeningIndex];
+                        gamesForCurrentOpening++;
+
+                        // Move to next opening after completing games for current one
+                        if (gamesForCurrentOpening >= gamesPerOpening) {
+                            currentOpeningIndex++;
+                            gamesForCurrentOpening = 0;
+                        }
+                    }
+                }
+
+                // Play one game
+                const result = await playOneGame(visualSpeed, forcedFirstMove);
+
+                // Store complete game log
+                const gameWinner = result.p1Score > result.p2Score ? 1 :
+                                  result.p2Score > result.p1Score ? 2 : 0;
+                completeGameLogs.push({
+                    gameNumber: gameNum,
+                    moves: result.allMoves.map((m, idx) => ({
+                        moveNum: idx + 1,
+                        player: (idx % 2) + 1, // Alternates 1, 2, 1, 2...
+                        hex: m.hex,
+                        tile: m.tile
+                    })),
+                    finalScores: {
+                        p1: result.p1Score,
+                        p2: result.p2Score
+                    },
+                    winner: gameWinner,
+                    spatialPattern: result.spatialPattern
+                });
+
+                // Update statistics
+                stats.p1TotalScore += result.p1Score;
+                stats.p2TotalScore += result.p2Score;
+                stats.scoreDiffs.push(result.p1Score - result.p2Score);
+
+                if (result.p1Score > result.p2Score) {
+                    stats.p1Wins++;
+                } else if (result.p2Score > result.p1Score) {
+                    stats.p2Wins++;
+                } else {
+                    stats.draws++;
+                }
+
+                // Track opening (first 4 moves)
+                const openingKey = result.opening;
+                if (!stats.openings[openingKey]) {
+                    stats.openings[openingKey] = {
+                        games: 0,
+                        p1Wins: 0,
+                        p2Wins: 0,
+                        draws: 0,
+                        totalDiff: 0
+                    };
+                }
+                stats.openings[openingKey].games++;
+                if (result.p1Score > result.p2Score) {
+                    stats.openings[openingKey].p1Wins++;
+                } else if (result.p2Score > result.p1Score) {
+                    stats.openings[openingKey].p2Wins++;
+                } else {
+                    stats.openings[openingKey].draws++;
+                }
+                stats.openings[openingKey].totalDiff += (result.p1Score - result.p2Score);
+
+                // Track individual moves
+                const moveStats = [
+                    { key: result.move1, statsObj: stats.move1Stats },
+                    { key: result.move2, statsObj: stats.move2Stats },
+                    { key: result.move3, statsObj: stats.move3Stats },
+                    { key: result.move4, statsObj: stats.move4Stats }
+                ];
+
+                moveStats.forEach(({ key, statsObj }) => {
+                    if (!key) return; // Skip if move doesn't exist (game ended early)
+
+                    if (!statsObj[key]) {
+                        statsObj[key] = {
+                            games: 0,
+                            p1Wins: 0,
+                            p2Wins: 0,
+                            draws: 0,
+                            totalDiff: 0
+                        };
+                    }
+
+                    statsObj[key].games++;
+                    if (result.p1Score > result.p2Score) {
+                        statsObj[key].p1Wins++;
+                    } else if (result.p2Score > result.p1Score) {
+                        statsObj[key].p2Wins++;
+                    } else {
+                        statsObj[key].draws++;
+                    }
+                    statsObj[key].totalDiff += (result.p1Score - result.p2Score);
+                });
+
+                // Track exhaustive opening stats
+                if (useExhaustiveOpening && result.move1) {
+                    const openingKey = result.move1; // e.g., "h11t5"
+                    if (exhaustiveOpeningStats[openingKey]) {
+                        const oStat = exhaustiveOpeningStats[openingKey];
+                        oStat.games++;
+                        oStat.p1TotalScore += result.p1Score;
+                        oStat.p2TotalScore += result.p2Score;
+
+                        if (result.p1Score > result.p2Score) {
+                            oStat.p1Wins++;
+                        } else if (result.p2Score > result.p1Score) {
+                            oStat.p2Wins++;
+                        } else {
+                            oStat.draws++;
+                        }
+
+                        // Track P2's response (move 2)
+                        if (result.move2) {
+                            if (!oStat.move2Responses[result.move2]) {
+                                oStat.move2Responses[result.move2] = {
+                                    count: 0, p1Wins: 0, p2Wins: 0
+                                };
+                            }
+                            oStat.move2Responses[result.move2].count++;
+                            if (result.p1Score > result.p2Score) {
+                                oStat.move2Responses[result.move2].p1Wins++;
+                            } else if (result.p2Score > result.p1Score) {
+                                oStat.move2Responses[result.move2].p2Wins++;
+                            }
+                        }
+
+                        // Track P1's move 3 choice
+                        if (result.move3) {
+                            if (!oStat.move3Choices[result.move3]) {
+                                oStat.move3Choices[result.move3] = {
+                                    count: 0, p1Wins: 0, p2Wins: 0
+                                };
+                            }
+                            oStat.move3Choices[result.move3].count++;
+                            if (result.p1Score > result.p2Score) {
+                                oStat.move3Choices[result.move3].p1Wins++;
+                            } else if (result.p2Score > result.p1Score) {
+                                oStat.move3Choices[result.move3].p2Wins++;
+                            }
+                        }
+
+                        // Calculate average score diff
+                        oStat.avgScoreDiff = (oStat.p1TotalScore - oStat.p2TotalScore) / oStat.games;
+                    }
+                }
+
+                // Track conditional moves (counter-move analysis)
+                const m1 = result.move1;
+                const m2 = result.move2;
+                const m3 = result.move3;
+                const m4 = result.move4;
+
+                // Move 2 given Move 1
+                if (m1 && m2) {
+                    if (!stats.conditionalMoves.move2GivenMove1[m1]) {
+                        stats.conditionalMoves.move2GivenMove1[m1] = {};
+                    }
+                    if (!stats.conditionalMoves.move2GivenMove1[m1][m2]) {
+                        stats.conditionalMoves.move2GivenMove1[m1][m2] = {
+                            games: 0, p1Wins: 0, p2Wins: 0, draws: 0, totalDiff: 0
+                        };
+                    }
+                    const m2stat = stats.conditionalMoves.move2GivenMove1[m1][m2];
+                    m2stat.games++;
+                    if (result.p1Score > result.p2Score) m2stat.p1Wins++;
+                    else if (result.p2Score > result.p1Score) m2stat.p2Wins++;
+                    else m2stat.draws++;
+                    m2stat.totalDiff += (result.p1Score - result.p2Score);
+                }
+
+                // Move 3 given Moves 1-2
+                if (m1 && m2 && m3) {
+                    const m1m2Key = `${m1}-${m2}`;
+                    if (!stats.conditionalMoves.move3GivenMove1And2[m1m2Key]) {
+                        stats.conditionalMoves.move3GivenMove1And2[m1m2Key] = {};
+                    }
+                    if (!stats.conditionalMoves.move3GivenMove1And2[m1m2Key][m3]) {
+                        stats.conditionalMoves.move3GivenMove1And2[m1m2Key][m3] = {
+                            games: 0, p1Wins: 0, p2Wins: 0, draws: 0, totalDiff: 0
+                        };
+                    }
+                    const m3stat = stats.conditionalMoves.move3GivenMove1And2[m1m2Key][m3];
+                    m3stat.games++;
+                    if (result.p1Score > result.p2Score) m3stat.p1Wins++;
+                    else if (result.p2Score > result.p1Score) m3stat.p2Wins++;
+                    else m3stat.draws++;
+                    m3stat.totalDiff += (result.p1Score - result.p2Score);
+                }
+
+                // Move 4 given Moves 1-3
+                if (m1 && m2 && m3 && m4) {
+                    const m1m2m3Key = `${m1}-${m2}-${m3}`;
+                    if (!stats.conditionalMoves.move4GivenMove1To3[m1m2m3Key]) {
+                        stats.conditionalMoves.move4GivenMove1To3[m1m2m3Key] = {};
+                    }
+                    if (!stats.conditionalMoves.move4GivenMove1To3[m1m2m3Key][m4]) {
+                        stats.conditionalMoves.move4GivenMove1To3[m1m2m3Key][m4] = {
+                            games: 0, p1Wins: 0, p2Wins: 0, draws: 0, totalDiff: 0
+                        };
+                    }
+                    const m4stat = stats.conditionalMoves.move4GivenMove1To3[m1m2m3Key][m4];
+                    m4stat.games++;
+                    if (result.p1Score > result.p2Score) m4stat.p1Wins++;
+                    else if (result.p2Score > result.p1Score) m4stat.p2Wins++;
+                    else m4stat.draws++;
+                    m4stat.totalDiff += (result.p1Score - result.p2Score);
+                }
+
+                // Track spatial patterns
+                const pattern = stats.spatialPatterns[result.spatialPattern];
+                pattern.count++;
+                if (result.p1Score > result.p2Score) {
+                    pattern.p1Wins++;
+                } else if (result.p2Score > result.p1Score) {
+                    pattern.p2Wins++;
+                }
+
+                // Track board snapshots
+                const winner = result.p1Score > result.p2Score ? 'p1Wins' :
+                              result.p2Score > result.p1Score ? 'p2Wins' : null;
+                if (winner) {
+                    Object.keys(result.boardSnapshots).forEach(moveKey => {
+                        if (stats.boardSnapshots[moveKey]) {
+                            stats.boardSnapshots[moveKey][winner].push(result.boardSnapshots[moveKey]);
+                        }
+                    });
+                }
+
+                // Track hex occupancy
+                result.allMoves.forEach((move, idx) => {
+                    const hexStat = stats.hexOccupancy[move.hex];
+                    hexStat.total++;
+                    if (result.p1Score > result.p2Score) hexStat.p1Wins++;
+                    else if (result.p2Score > result.p1Score) hexStat.p2Wins++;
+                    hexStat.totalMoveNumber += (idx + 1);
+                    hexStat.avgMoveNumber = hexStat.totalMoveNumber / hexStat.total;
+                });
+
+                // Update display after EVERY game
+                // Update display with exhaustive opening info if applicable
+                const exhaustiveInfo = useExhaustiveOpening ? {
+                    currentOpeningIndex: currentOpeningIndex,
+                    totalOpenings: allP1Openings.length,
+                    currentOpening: forcedFirstMove ? forcedFirstMove.key : null,
+                    gamesForOpening: gamesForCurrentOpening,
+                    totalGamesToRun: totalGamesToRun
+                } : null;
+                updateSimulationDisplay(stats, gameNum, totalGamesToRun, result, exhaustiveInfo);
+
+                // Delay for UI updates and to prevent browser freezing
+                // Update every 5 games for better performance
+                if (gameNum % 5 === 0 || gameNum === gameCount) {
+                    await sleep(10);
+                }
+            }
+
+            // Final update
+            const elapsedTime = ((Date.now() - startTime) / 1000).toFixed(1);
+            const finalGameCount = totalGamesToRun;
+
+            if (!simulationCancelled) {
+                if (useExhaustiveOpening) {
+                    if (useRandomGoodOpenings) {
+                        document.getElementById('simProgress').textContent =
+                            `✅ Completed random good openings test: ${finalGameCount} games randomly selected from ${allP1Openings.length} good openings in ${elapsedTime}s`;
+                    } else {
+                        document.getElementById('simProgress').textContent =
+                            `Completed exhaustive opening test: ${allP1Openings.length} openings × ${gamesPerOpening} games = ${finalGameCount} total games in ${elapsedTime}s`;
+                    }
+                } else {
+                    document.getElementById('simProgress').textContent =
+                        `Completed ${finalGameCount} games in ${elapsedTime}s`;
+                }
+            }
+
+            // Store stats globally and show download buttons
+            lastSimulationStats = {
+                stats: stats,
+                gameCount: finalGameCount,
+                elapsedTime: elapsedTime,
+                timestamp: new Date().toISOString(),
+                config: {
+                    mctsSims: mctsSims,
+                    useMinimaxEndgame: useMinimaxEndgame,
+                    minimaxThreshold: minimaxThreshold,
+                    useFreeOpening: useFreeOpening,
+                    useAsymmetricTiles: useAsymmetricTiles,
+                    useExhaustiveOpening: useExhaustiveOpening,
+                    gamesPerOpening: gamesPerOpening,
+                    useStrongOpeningsOnly: useStrongOpeningsOnly,
+                    useRandomGoodOpenings: useRandomGoodOpenings,
+                    useTop10Openings: useTop10Openings,
+                    doubleMCTSForP2Move2: doubleMCTSForP2Move2,
+                    p2Move2Simulations: doubleMCTSForP2Move2 ? mctsSims * 2 : mctsSims,
+                    useP2LearningMode: useP2LearningMode,
+                    useMutualLearning: useMutualLearning
+                },
+                p2ResponseBlacklist: useP2LearningMode ? p2ResponseBlacklist : null,
+                mutualBlacklist: useMutualLearning ? mutualBlacklist : null,
+                exhaustiveOpeningStats: useExhaustiveOpening ? exhaustiveOpeningStats : null
+            };
+            document.getElementById('downloadResultsBtn').style.display = 'inline-block';
+            document.getElementById('downloadResultsCSVBtn').style.display = 'inline-block';
+            document.getElementById('downloadGameLogsBtn').style.display = 'inline-block';
+            if (useExhaustiveOpening) {
+                document.getElementById('downloadExhaustiveBtn').style.display = 'inline-block';
+            }
+
+            // Re-enable controls
+            document.getElementById('startSimBtn').disabled = false;
+            document.getElementById('cancelSimBtn').style.display = 'none';
+        }
+
+        async function playOneGame(visualSpeed = 0, forcedFirstMove = null) {
+            // Create new game with correct engine variant
+            let game;
+            if (useAsymmetricTiles) {
+                game = new HexukiGameEngineAsymmetric();
+                // Apply custom tiles if specified
+                applyCustomTiles(game);
+            } else if (useFreeOpening) {
+                game = new HexukiGameEngineFreeOpening();
+            } else {
+                game = new HexukiGameEngineV2();
+            }
+            const aiPlayer = new MCTSPlayer(mctsSims, null, {
+                useMinimaxRollouts: useMinimaxRollouts,
+                minimaxThreshold: minimaxThreshold
+            });
+            const minimax = useMinimaxEndgame ? new MinimaxEndgameSolverOptimized(game) : null;
+
+            const moves = [];
+            const boardSnapshots = {}; // Store board state at key moments
+
+            // If visualizing, sync with display
+            const oldGame = currentGame;
+            if (visualSpeed > 0) {
+                currentGame = game;
+                moveHistory = [];
+            }
+
+            // Play until game ends
+            let moveNum = 0;
+            let p1Move1Key = null; // Track P1's opening for blacklist lookup
+            let p2Move2 = null; // Track P2's response for potential blacklisting
+
+            // Mutual learning: track first 6 moves (3 per player)
+            const trackedMoves = []; // Stores move keys: [move0, move1, move2, move3, move4, move5]
+
+            while (!game.gameEnded) {
+                let validMoves = game.getAllValidMoves();
+                if (validMoves.length === 0) break;
+
+                // MUTUAL LEARNING MODE: Filter out blacklisted sequences (6 moves deep)
+                if (useMutualLearning && moveNum < 6) {
+                    const currentPlayer = game.currentPlayer;
+
+                    if (currentPlayer === 1) {
+                        // P1's turn (moves 0, 2, 4)
+                        // In exhaustive opening mode, skip move 0 blacklisting (we're testing specific openings)
+                        if (moveNum === 0 && useExhaustiveOpening) {
+                            // Don't blacklist P1's opening move in exhaustive mode
+                            console.log('Mutual Learning (P1): Skipping move 1 blacklist check (exhaustive opening mode)');
+                        } else {
+                            // Build P1's sequence INCLUDING opponent moves for context
+                            let p1Sequence = '';
+                            if (moveNum === 0) {
+                                // First move - check if any opening is blacklisted (only in non-exhaustive mode)
+                                p1Sequence = ''; // No sequence yet
+                            } else if (moveNum === 2) {
+                                // Third move - include P1's move 1 AND P2's move 2 for context
+                                p1Sequence = trackedMoves[0] + '-' + trackedMoves[1]; // P1 opening + P2 response
+                            } else if (moveNum === 4) {
+                                // Fifth move - full sequence so far: P1-P2-P1-P2
+                                p1Sequence = trackedMoves[0] + '-' + trackedMoves[1] + '-' + trackedMoves[2] + '-' + trackedMoves[3];
+                            }
+
+                            // Filter moves that would lead to a blacklisted sequence
+                            if (p1Sequence || moveNum === 0) {
+                                const beforeCount = validMoves.length;
+                                validMoves = validMoves.filter(move => {
+                                    const moveKey = `h${move.hexId}t${move.tileValue}`;
+                                    const partialSequence = p1Sequence ? (p1Sequence + '-' + moveKey) : moveKey;
+
+                                    // Check if any blacklisted sequence starts with this partial sequence
+                                    const isBlacklisted = Object.keys(mutualBlacklist.p1).some(blacklisted =>
+                                        blacklisted.startsWith(partialSequence)
+                                    );
+
+                                    return !isBlacklisted;
+                                });
+                                const afterCount = validMoves.length;
+                                if (beforeCount > afterCount) {
+                                    console.log(`Mutual Learning (P1): Filtered ${beforeCount - afterCount} blacklisted moves. ${afterCount} options remain.`);
+                                }
+                            }
+                        }
+                    } else {
+                        // P2's turn (moves 1, 3, 5)
+                        // Build P2's sequence INCLUDING opponent moves for context
+                        const p1Opening = trackedMoves[0] || ''; // P1's first move
+                        let p2Sequence = '';
+
+                        if (moveNum === 1) {
+                            // Second move - context is just P1's opening
+                            p2Sequence = trackedMoves[0]; // P1's opening
+                            console.log(`DEBUG P2 Move 2: p2Sequence='${p2Sequence}', trackedMoves[0]='${trackedMoves[0]}', will filter=${!!p2Sequence}`);
+                        } else if (moveNum === 3) {
+                            // Fourth move - include P1's opening + P2's move 2 + P1's move 3
+                            p2Sequence = trackedMoves[0] + '-' + trackedMoves[1] + '-' + trackedMoves[2];
+                        } else if (moveNum === 5) {
+                            // Sixth move - full sequence: P1-P2-P1-P2-P1
+                            p2Sequence = trackedMoves[0] + '-' + trackedMoves[1] + '-' + trackedMoves[2] + '-' + trackedMoves[3] + '-' + trackedMoves[4];
+                        }
+
+                        // Filter moves that would lead to a blacklisted sequence
+                        if (p2Sequence) {
+                            const beforeCount = validMoves.length;
+                            validMoves = validMoves.filter(move => {
+                                const moveKey = `h${move.hexId}t${move.tileValue}`;
+                                const partialSequence = p2Sequence + '-' + moveKey;
+
+                                // Check if any blacklisted sequence starts with this partial sequence
+                                const isBlacklisted = Object.keys(mutualBlacklist.p2).some(blacklisted =>
+                                    blacklisted.startsWith(partialSequence)
+                                );
+
+                                return !isBlacklisted;
+                            });
+                            const afterCount = validMoves.length;
+                            if (beforeCount > afterCount) {
+                                // Log which moves were filtered
+                                const allMoves = game.getAllValidMoves().map(m => `h${m.hexId}t${m.tileValue}`);
+                                const remainingMoves = validMoves.map(m => `h${m.hexId}t${m.tileValue}`);
+                                const filteredMoves = allMoves.filter(m => !remainingMoves.includes(m));
+                                console.log(`Mutual Learning (P2): Filtered ${filteredMoves.join(', ')} (${beforeCount - afterCount} moves). ${afterCount} options remain.`);
+                            }
+                        }
+                    }
+
+                    // If all moves are blacklisted, reset that specific sequence
+                    if (validMoves.length === 0) {
+                        const currentPlayer = game.currentPlayer;
+                        if (currentPlayer === 1) {
+                            // Build the current context sequence
+                            let p1Sequence = '';
+                            if (moveNum === 0) {
+                                p1Sequence = '';
+                            } else if (moveNum === 2) {
+                                p1Sequence = trackedMoves[0] + '-' + trackedMoves[1];
+                            } else if (moveNum === 4) {
+                                p1Sequence = trackedMoves[0] + '-' + trackedMoves[1] + '-' + trackedMoves[2] + '-' + trackedMoves[3];
+                            }
+                            console.log(`WARNING: All P1 moves blacklisted! Resetting P1 blacklist for sequence: ${p1Sequence || 'opening'}`);
+                            // Reset relevant blacklist entries
+                            if (p1Sequence) {
+                                Object.keys(mutualBlacklist.p1).forEach(key => {
+                                    if (key.startsWith(p1Sequence)) delete mutualBlacklist.p1[key];
+                                });
+                            } else {
+                                mutualBlacklist.p1 = {};
+                            }
+                        } else {
+                            // Build the current context sequence for P2
+                            let p2Sequence = '';
+                            if (moveNum === 1) {
+                                p2Sequence = trackedMoves[0];
+                            } else if (moveNum === 3) {
+                                p2Sequence = trackedMoves[0] + '-' + trackedMoves[1] + '-' + trackedMoves[2];
+                            } else if (moveNum === 5) {
+                                p2Sequence = trackedMoves[0] + '-' + trackedMoves[1] + '-' + trackedMoves[2] + '-' + trackedMoves[3] + '-' + trackedMoves[4];
+                            }
+                            console.log(`WARNING: All P2 moves blacklisted! Resetting P2 blacklist for sequence: ${p2Sequence}`);
+                            Object.keys(mutualBlacklist.p2).forEach(key => {
+                                if (key.startsWith(p2Sequence)) delete mutualBlacklist.p2[key];
+                            });
+                        }
+                        validMoves = game.getAllValidMoves();
+                    }
+                }
+
+                // P2 LEARNING MODE: Filter out blacklisted responses on move 2
+                if (useP2LearningMode && moveNum === 1) {
+                    let blacklist = [];
+
+                    if (useRandomGoodOpenings) {
+                        // Global blacklist (shared across all openings)
+                        blacklist = p2ResponseBlacklist.global || [];
+                    } else if (p1Move1Key) {
+                        // Per-opening blacklist
+                        blacklist = p2ResponseBlacklist[p1Move1Key] || [];
+                    }
+
+                    if (blacklist.length > 0) {
+                        const beforeCount = validMoves.length;
+                        validMoves = validMoves.filter(move => {
+                            const moveKey = `h${move.hexId}t${move.tileValue}`;
+                            return !blacklist.includes(moveKey);
+                        });
+                        const afterCount = validMoves.length;
+                        if (beforeCount > afterCount) {
+                            const contextMsg = useRandomGoodOpenings ? 'globally' : `for ${p1Move1Key}`;
+                            console.log(`P2 Learning: Filtered ${beforeCount - afterCount} blacklisted responses ${contextMsg}. ${afterCount} options remain.`);
+                        }
+                    }
+                }
+
+                // If all moves are blacklisted, allow retry (reset blacklist)
+                if (validMoves.length === 0) {
+                    if (useRandomGoodOpenings) {
+                        console.log(`WARNING: All P2 responses blacklisted globally! Resetting blacklist.`);
+                        p2ResponseBlacklist.global = [];
+                    } else if (p1Move1Key) {
+                        console.log(`WARNING: All P2 responses blacklisted for ${p1Move1Key}! Resetting blacklist.`);
+                        p2ResponseBlacklist[p1Move1Key] = [];
+                    }
+                    validMoves = game.getAllValidMoves();
+                }
+
+                // Get AI move (or use forced first move)
+                let result;
+
+                if (moveNum === 0 && forcedFirstMove) {
+                    // Use forced first move (exhaustive opening mode)
+                    result = {
+                        move: {
+                            hexId: forcedFirstMove.hexId,
+                            tileValue: forcedFirstMove.tileValue
+                        }
+                    };
+                    // Track P1's opening for blacklist
+                    p1Move1Key = forcedFirstMove.key;
+                } else {
+                    // Normal AI decision
+                    const emptyHexes = game.board.filter(h => h.value === null).length;
+                    const useMinimax = useMinimaxEndgame && minimax && emptyHexes <= minimaxThreshold;
+
+                    // Check if this is P2's first move (move 2) and we should use double MCTS
+                    const useDoubleMCTS = doubleMCTSForP2Move2 && moveNum === 1;
+                    const simsToUse = useDoubleMCTS ? mctsSims * 2 : mctsSims;
+
+                    if (useMinimax) {
+                        result = runMinimax(game, 20, minimax);
+                    } else {
+                        // Run MCTS (with double sims if enabled)
+                        if (useDoubleMCTS) {
+                            const tempAI = new MCTSPlayer(simsToUse, null, {
+                                useMinimaxRollouts: useMinimaxRollouts,
+                                minimaxThreshold: minimaxThreshold
+                            });
+                            result = await runMCTSChunked(game, simsToUse, tempAI);
+                        } else {
+                            result = await runMCTSChunked(game, mctsSims, aiPlayer);
+                        }
+
+                        // P2 Learning Mode: If MCTS picked a blacklisted move, use next-best alternative
+                        if (useP2LearningMode && moveNum === 1 && result && result.stats && result.stats.alternatives) {
+                            const selectedMove = `h${result.move.hexId}t${result.move.tileValue}`;
+                            const isBlacklisted = !validMoves.some(vm => vm.hexId === result.move.hexId && vm.tileValue === result.move.tileValue);
+
+                            if (isBlacklisted) {
+                                console.log(`P2 Learning: MCTS top choice ${selectedMove} is blacklisted. Searching alternatives...`);
+
+                                // Find best non-blacklisted alternative from MCTS ranking
+                                let foundAlternative = false;
+                                for (const alt of result.stats.alternatives) {
+                                    const altMove = `h${alt.move.hexId}t${alt.move.tileValue}`;
+                                    const altBlacklisted = !validMoves.some(vm => vm.hexId === alt.move.hexId && vm.tileValue === alt.move.tileValue);
+
+                                    if (!altBlacklisted) {
+                                        result.move = alt.move;
+                                        console.log(`P2 Learning: Using MCTS alternative #${result.stats.alternatives.indexOf(alt) + 2}: ${altMove} (visits: ${alt.visits}, win rate: ${(alt.winRate * 100).toFixed(1)}%)`);
+                                        foundAlternative = true;
+                                        break;
+                                    }
+                                }
+
+                                // If all alternatives are blacklisted, pick random non-blacklisted move
+                                if (!foundAlternative) {
+                                    console.log(`P2 Learning: All MCTS alternatives blacklisted. Random selection from ${validMoves.length} remaining options.`);
+                                    const randomMove = validMoves[Math.floor(Math.random() * validMoves.length)];
+                                    result.move = {
+                                        hexId: randomMove.hexId,
+                                        tileValue: randomMove.tileValue
+                                    };
+                                    console.log(`P2 Learning: Selected h${randomMove.hexId}t${randomMove.tileValue}`);
+                                }
+                            } else {
+                                console.log(`P2 Learning: MCTS top choice h${result.move.hexId}t${result.move.tileValue} (not blacklisted, visits: ${result.stats.visits})`);
+                            }
+                        }
+
+                        // Mutual Learning Mode: If MCTS picked a blacklisted move, use next-best alternative
+                        if (useMutualLearning && moveNum < 6 && result) {
+                            const selectedMove = `h${result.move.hexId}t${result.move.tileValue}`;
+                            const isBlacklisted = !validMoves.some(vm => vm.hexId === result.move.hexId && vm.tileValue === result.move.tileValue);
+
+                            if (isBlacklisted) {
+                                const player = game.currentPlayer === 1 ? 'P1' : 'P2';
+                                console.log(`Mutual Learning (${player}): MCTS top choice ${selectedMove} is blacklisted. Searching alternatives...`);
+
+                                // Find best non-blacklisted alternative from MCTS ranking
+                                let foundAlternative = false;
+                                if (result.stats && result.stats.alternatives) {
+                                    for (const alt of result.stats.alternatives) {
+                                        const altMove = `h${alt.move.hexId}t${alt.move.tileValue}`;
+                                        const altBlacklisted = !validMoves.some(vm => vm.hexId === alt.move.hexId && vm.tileValue === alt.move.tileValue);
+
+                                        if (!altBlacklisted) {
+                                            result.move = alt.move;
+                                            console.log(`Mutual Learning (${player}): Using MCTS alternative #${result.stats.alternatives.indexOf(alt) + 2}: ${altMove}`);
+                                            foundAlternative = true;
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                // If all alternatives are blacklisted, pick random non-blacklisted move
+                                if (!foundAlternative) {
+                                    console.log(`Mutual Learning (${player}): All MCTS alternatives blacklisted. Random selection from ${validMoves.length} remaining options.`);
+                                    const randomMove = validMoves[Math.floor(Math.random() * validMoves.length)];
+                                    result.move = {
+                                        hexId: randomMove.hexId,
+                                        tileValue: randomMove.tileValue
+                                    };
+                                    console.log(`Mutual Learning (${player}): Selected h${randomMove.hexId}t${randomMove.tileValue}`);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (!result) break;
+
+                // Make move
+                game.makeMove(result.move.hexId, result.move.tileValue);
+                moves.push({ hex: result.move.hexId, tile: result.move.tileValue });
+
+                // Track moves for mutual learning (first 6 moves)
+                if (useMutualLearning && moveNum < 6) {
+                    const moveKey = `h${result.move.hexId}t${result.move.tileValue}`;
+                    trackedMoves[moveNum] = moveKey;
+                }
+
+                // Track P2's move 2 for potential blacklisting
+                if (moveNum === 1) {
+                    p2Move2 = `h${result.move.hexId}t${result.move.tileValue}`;
+                }
+
+                moveNum++;
+
+                // Capture board snapshots at key moments
+                if ([3, 6, 9, 12, 15].includes(moveNum)) {
+                    boardSnapshots[`move${moveNum}`] = game.board.map(hex => ({
+                        id: hex.id,
+                        value: hex.value,
+                        owner: hex.owner
+                    }));
+                }
+
+                // Visualize if speed > 0
+                if (visualSpeed > 0) {
+                    moveHistory.push({ hex: result.move.hexId, tile: result.move.tileValue });
+                    updateDisplay();
+                    await sleep(visualSpeed);
+                }
+            }
+
+            // Restore original game if we were visualizing
+            if (visualSpeed > 0) {
+                currentGame = oldGame;
+                updateDisplay();
+            }
+
+            // Calculate scores
+            const scores = game.calculateScores();
+
+            // P2 LEARNING MODE: Add to blacklist if P2 lost
+            if (useP2LearningMode && p2Move2 && scores.player2 < scores.player1) {
+                if (useRandomGoodOpenings) {
+                    // Global blacklist (shared across all openings)
+                    if (!p2ResponseBlacklist.global) {
+                        p2ResponseBlacklist.global = [];
+                    }
+                    if (!p2ResponseBlacklist.global.includes(p2Move2)) {
+                        p2ResponseBlacklist.global.push(p2Move2);
+                        console.log(`P2 Learning: Globally blacklisted ${p2Move2} (P2 lost ${scores.player2} vs ${scores.player1})`);
+                    }
+                } else if (p1Move1Key) {
+                    // Per-opening blacklist
+                    if (!p2ResponseBlacklist[p1Move1Key]) {
+                        p2ResponseBlacklist[p1Move1Key] = [];
+                    }
+                    if (!p2ResponseBlacklist[p1Move1Key].includes(p2Move2)) {
+                        p2ResponseBlacklist[p1Move1Key].push(p2Move2);
+                        console.log(`P2 Learning: Blacklisted ${p2Move2} for ${p1Move1Key} (P2 lost ${scores.player2} vs ${scores.player1})`);
+                    }
+                }
+            }
+
+            // MUTUAL LEARNING MODE: Add to blacklist if either player lost
+            if (useMutualLearning && trackedMoves.length >= 6) {
+                // We have a complete 6-move sequence with full context
+                // P1 sequences: P1move-P2move-P1move-P2move-P1move
+                // P2 sequences: P1move-P2move-P1move-P2move-P1move-P2move
+                const p1FullSequence = trackedMoves[0] + '-' + trackedMoves[1] + '-' + trackedMoves[2] + '-' + trackedMoves[3] + '-' + trackedMoves[4];
+                const p2FullSequence = trackedMoves[0] + '-' + trackedMoves[1] + '-' + trackedMoves[2] + '-' + trackedMoves[3] + '-' + trackedMoves[4] + '-' + trackedMoves[5];
+
+                if (scores.player1 < scores.player2) {
+                    // P1 lost - blacklist P1's full sequence including opponent context
+                    if (!mutualBlacklist.p1[p1FullSequence]) {
+                        mutualBlacklist.p1[p1FullSequence] = true;
+                        console.log(`Mutual Learning: Blacklisted P1 sequence ${p1FullSequence} (P1 lost ${scores.player1} vs ${scores.player2})`);
+                    }
+                } else if (scores.player2 < scores.player1) {
+                    // P2 lost - blacklist P2's full sequence including opponent context
+                    if (!mutualBlacklist.p2[p2FullSequence]) {
+                        mutualBlacklist.p2[p2FullSequence] = true;
+                        console.log(`Mutual Learning: Blacklisted P2 sequence ${p2FullSequence} (P2 lost ${scores.player2} vs ${scores.player1})`);
+                    }
+                }
+            }
+
+            // Get opening (first 4 moves)
+            const opening = moves.slice(0, 4)
+                .map(m => `h${m.hex}t${m.tile}`)
+                .join('-');
+
+            // Get individual moves
+            const individualMoves = moves.slice(0, 4).map(m => `h${m.hex}t${m.tile}`);
+
+            // Analyze spatial patterns
+            const centerHexes = [4, 7, 9, 11, 14];
+            let centerCount = 0, edgeCount = 0;
+
+            for (let i = 0; i < Math.min(6, moves.length); i++) {
+                if (centerHexes.includes(moves[i].hex)) {
+                    centerCount++;
+                } else {
+                    edgeCount++;
+                }
+            }
+
+            let spatialPattern = 'balanced';
+            if (centerCount >= edgeCount + 2) spatialPattern = 'centerFirst';
+            else if (edgeCount >= centerCount + 2) spatialPattern = 'edgeFirst';
+
+            return {
+                p1Score: scores.player1,
+                p2Score: scores.player2,
+                opening: opening,
+                moveCount: moves.length,
+                move1: individualMoves[0] || null,
+                move2: individualMoves[1] || null,
+                move3: individualMoves[2] || null,
+                move4: individualMoves[3] || null,
+                boardSnapshots: boardSnapshots,
+                spatialPattern: spatialPattern,
+                allMoves: moves // Include all moves with timing
+            };
+        }
+
+        function updateSimulationDisplay(stats, currentGame, totalGames, lastResult, exhaustiveInfo = null) {
+            // Progress
+            const pct = ((currentGame / totalGames) * 100).toFixed(1);
+
+            let progressHTML = '';
+            if (exhaustiveInfo) {
+                // Exhaustive opening mode progress
+                const openingNum = exhaustiveInfo.currentOpeningIndex + 1;
+                progressHTML = `
+                    <strong>Exhaustive Opening Test</strong><br>
+                    Opening ${openingNum} of ${exhaustiveInfo.totalOpenings}: <strong style="color: #569cd6;">${exhaustiveInfo.currentOpening}</strong><br>
+                    Game ${exhaustiveInfo.gamesForOpening} of ${gamesPerOpening} for this opening<br>
+                    <em>Total: ${currentGame} of ${totalGames} games (${pct}%)</em><br>
+                    Last result: P1: ${lastResult.p1Score}, P2: ${lastResult.p2Score}
+                    ${lastResult.p1Score > lastResult.p2Score ? '(P1 wins)' :
+                      lastResult.p2Score > lastResult.p1Score ? '(P2 wins)' : '(Draw)'}
+                `;
+            } else {
+                // Normal mode progress
+                progressHTML = `
+                    <strong>Game ${currentGame} of ${totalGames}</strong> (${pct}%)<br>
+                    Last result: P1: ${lastResult.p1Score}, P2: ${lastResult.p2Score}
+                    ${lastResult.p1Score > lastResult.p2Score ? '(P1 wins)' :
+                      lastResult.p2Score > lastResult.p1Score ? '(P2 wins)' : '(Draw)'}
+                `;
+            }
+
+            document.getElementById('simProgress').innerHTML = progressHTML;
+
+            // Player 1 stats
+            const p1WinPct = ((stats.p1Wins / currentGame) * 100).toFixed(1);
+            const avgP1Score = (stats.p1TotalScore / currentGame).toFixed(1);
+            document.getElementById('p1Stats').innerHTML = `
+                <div style="color: #d4d4d4; font-size: 0.95em;">
+                    <div>Wins: <strong style="color: #c0392b;">${stats.p1Wins}</strong> (${p1WinPct}%)</div>
+                    <div>Avg Score: <strong>${avgP1Score}</strong></div>
+                </div>
+            `;
+
+            // Player 2 stats
+            const p2WinPct = ((stats.p2Wins / currentGame) * 100).toFixed(1);
+            const avgP2Score = (stats.p2TotalScore / currentGame).toFixed(1);
+            document.getElementById('p2Stats').innerHTML = `
+                <div style="color: #d4d4d4; font-size: 0.95em;">
+                    <div>Wins: <strong style="color: #2980b9;">${stats.p2Wins}</strong> (${p2WinPct}%)</div>
+                    <div>Avg Score: <strong>${avgP2Score}</strong></div>
+                </div>
+            `;
+
+            // Overall stats
+            const drawPct = ((stats.draws / currentGame) * 100).toFixed(1);
+            const avgDiff = (stats.scoreDiffs.reduce((a, b) => a + b, 0) / currentGame).toFixed(1);
+            const maxDiff = Math.max(...stats.scoreDiffs);
+            const minDiff = Math.min(...stats.scoreDiffs);
+
+            document.getElementById('overallStats').innerHTML = `
+                <div style="color: #d4d4d4; font-size: 0.95em;">
+                    <div>Draws: <strong>${stats.draws}</strong> (${drawPct}%)</div>
+                    <div>Avg Score Differential: <strong>${avgDiff}</strong> (P1 - P2)</div>
+                    <div>Max Differential: <strong>${maxDiff}</strong></div>
+                    <div>Min Differential: <strong>${minDiff}</strong></div>
+                </div>
+            `;
+
+            // Opening analysis - show top 10 best and worst
+            const openingsArray = Object.keys(stats.openings).map(key => {
+                const o = stats.openings[key];
+                const winRate = (o.p1Wins / o.games) * 100;
+                const avgDiff = o.totalDiff / o.games;
+                return {
+                    opening: key,
+                    games: o.games,
+                    p1Wins: o.p1Wins,
+                    p2Wins: o.p2Wins,
+                    draws: o.draws,
+                    winRate: winRate,
+                    avgDiff: avgDiff
+                };
+            });
+
+            openingsArray.sort((a, b) => b.winRate - a.winRate);
+
+            const top10 = openingsArray.slice(0, 10);
+            const bottom10 = openingsArray.slice(-10).reverse();
+
+            let openingHTML = '<div style="color: #d4d4d4; font-size: 0.9em;">';
+
+            if (top10.length > 0) {
+                openingHTML += '<h4 style="color: #4ec9b0; margin-top: 0;">Top 10 Best Openings (P1 Perspective)</h4>';
+                openingHTML += '<div style="font-family: monospace; font-size: 0.85em;">';
+                top10.forEach((o, i) => {
+                    openingHTML += `
+                        <div style="margin: 5px 0;">
+                            ${i + 1}. ${o.opening || '(incomplete)'}<br>
+                            &nbsp;&nbsp;&nbsp;${o.p1Wins}W-${o.p2Wins}L-${o.draws}D (${o.winRate.toFixed(1)}% P1)
+                            Avg Diff: ${o.avgDiff.toFixed(1)}
+                        </div>
+                    `;
+                });
+                openingHTML += '</div>';
+            }
+
+            if (bottom10.length > 0 && openingsArray.length > 10) {
+                openingHTML += '<h4 style="color: #f48771; margin-top: 15px;">Bottom 10 Worst Openings (P1 Perspective)</h4>';
+                openingHTML += '<div style="font-family: monospace; font-size: 0.85em;">';
+                bottom10.forEach((o, i) => {
+                    openingHTML += `
+                        <div style="margin: 5px 0;">
+                            ${i + 1}. ${o.opening || '(incomplete)'}<br>
+                            &nbsp;&nbsp;&nbsp;${o.p1Wins}W-${o.p2Wins}L-${o.draws}D (${o.winRate.toFixed(1)}% P1)
+                            Avg Diff: ${o.avgDiff.toFixed(1)}
+                        </div>
+                    `;
+                });
+                openingHTML += '</div>';
+            }
+
+            openingHTML += '</div>';
+            document.getElementById('openingStats').innerHTML = openingHTML;
+
+            // Individual move analysis
+            generateIndividualMoveStats(stats, currentGame);
+        }
+
+        function generateIndividualMoveStats(stats, totalGames) {
+            // Helper to format move stats
+            function formatMoveStats(statsObj, title, sortByP1 = true) {
+                const movesArray = Object.keys(statsObj).map(key => {
+                    const m = statsObj[key];
+                    const p1WinRate = (m.p1Wins / m.games) * 100;
+                    const p2WinRate = (m.p2Wins / m.games) * 100;
+                    const avgDiff = m.totalDiff / m.games;
+                    return {
+                        move: key,
+                        games: m.games,
+                        p1Wins: m.p1Wins,
+                        p2Wins: m.p2Wins,
+                        draws: m.draws,
+                        p1WinRate: p1WinRate,
+                        p2WinRate: p2WinRate,
+                        avgDiff: avgDiff
+                    };
+                });
+
+                // Sort by appropriate player's win rate
+                movesArray.sort((a, b) => {
+                    if (sortByP1) {
+                        return b.p1WinRate - a.p1WinRate;
+                    } else {
+                        return b.p2WinRate - a.p2WinRate;
+                    }
+                });
+
+                const top10 = movesArray.slice(0, 10);
+
+                if (top10.length === 0) return '';
+
+                const winnerLabel = sortByP1 ? 'P1' : 'P2';
+                const color = sortByP1 ? '#c0392b' : '#2980b9';
+
+                let html = `<h4 style="color: ${color}; margin-top: 15px;">${title}</h4>`;
+                html += '<div style="font-family: monospace; font-size: 0.85em;">';
+
+                top10.forEach((m, i) => {
+                    const winRate = sortByP1 ? m.p1WinRate : m.p2WinRate;
+                    html += `
+                        <div style="margin: 5px 0;">
+                            ${i + 1}. <strong>${m.move}</strong> - ${m.games} games<br>
+                            &nbsp;&nbsp;&nbsp;${m.p1Wins}W-${m.p2Wins}L-${m.draws}D
+                            (${winRate.toFixed(1)}% ${winnerLabel} win rate)
+                            Avg Diff: ${m.avgDiff.toFixed(1)}
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+                return html;
+            }
+
+            let individualHTML = '<div style="color: #d4d4d4; font-size: 0.9em; margin-top: 20px; border-top: 2px solid #555; padding-top: 15px;">';
+            individualHTML += '<h3 style="color: #569cd6; margin-top: 0;">Individual Move Analysis</h3>';
+
+            // Move 1 - P1's opening (sort by P1 win rate)
+            individualHTML += formatMoveStats(stats.move1Stats, 'Best P1 Opening Moves (Move 1)', true);
+
+            // Move 2 - P2's response (sort by P2 win rate)
+            individualHTML += formatMoveStats(stats.move2Stats, 'Best P2 Counter Moves (Move 2)', false);
+
+            // Move 3 - P1's second turn (sort by P1 win rate)
+            individualHTML += formatMoveStats(stats.move3Stats, 'Best P1 Second Moves (Move 3)', true);
+
+            // Move 4 - P2's second turn (sort by P2 win rate)
+            individualHTML += formatMoveStats(stats.move4Stats, 'Best P2 Second Moves (Move 4)', false);
+
+            individualHTML += '</div>';
+
+            // Append to opening stats section
+            document.getElementById('openingStats').innerHTML += individualHTML;
+
+            // Generate counter-move analysis
+            generateCounterMoveAnalysis(stats, totalGames);
+
+            // Generate spatial pattern analysis
+            generateSpatialPatternAnalysis(stats, totalGames);
+        }
+
+        function generateCounterMoveAnalysis(stats, totalGames) {
+            let html = '<div style="color: #d4d4d4; font-size: 0.9em; margin-top: 20px; border-top: 2px solid #555; padding-top: 15px;">';
+            html += '<h3 style="color: #569cd6; margin-top: 0;">Counter-Move Analysis</h3>';
+            html += '<div style="margin-bottom: 10px; color: #888; font-size: 0.85em;">Shows best responses to specific moves (min 3 games for statistical relevance)</div>';
+
+            // Move 2 given Move 1 (P2 responses to P1 openings)
+            html += '<h4 style="color: #c0392b;">Best P2 Responses to Each P1 Opening</h4>';
+            const move1Opens = Object.keys(stats.conditionalMoves.move2GivenMove1)
+                .map(m1 => {
+                    const responses = stats.conditionalMoves.move2GivenMove1[m1];
+                    const totalGames = Object.values(responses).reduce((sum, r) => sum + r.games, 0);
+                    return { move1: m1, totalGames, responses };
+                })
+                .filter(m => m.totalGames >= 3)
+                .sort((a, b) => b.totalGames - a.totalGames)
+                .slice(0, 10); // Top 10 most common P1 openings
+
+            if (move1Opens.length > 0) {
+                html += '<div style="font-family: monospace; font-size: 0.85em;">';
+                move1Opens.forEach(({ move1, totalGames, responses }) => {
+                    const sortedResponses = Object.keys(responses)
+                        .map(m2 => {
+                            const data = responses[m2];
+                            const p2WinRate = (data.p2Wins / data.games) * 100;
+                            return { move2: m2, ...data, p2WinRate };
+                        })
+                        .filter(r => r.games >= 3)
+                        .sort((a, b) => b.p2WinRate - a.p2WinRate)
+                        .slice(0, 3); // Top 3 responses
+
+                    if (sortedResponses.length > 0) {
+                        html += `<div style="margin: 12px 0; padding: 8px; background: #2d2d30; border-radius: 4px;">`;
+                        html += `<strong style="color: #c0392b;">When P1 plays ${move1}</strong> (${totalGames} games):<br>`;
+                        sortedResponses.forEach((r, idx) => {
+                            html += `&nbsp;&nbsp;${idx + 1}. <strong style="color: #2980b9;">${r.move2}</strong> - `;
+                            html += `${r.p2WinRate.toFixed(1)}% P2 win (${r.p2Wins}W-${r.p1Wins}L, ${r.games} games)<br>`;
+                        });
+                        html += `</div>`;
+                    }
+                });
+                html += '</div>';
+            } else {
+                html += '<div style="color: #888; font-size: 0.85em;">Not enough data yet (need 3+ games per sequence)</div>';
+            }
+
+            // Move 3 given Moves 1-2 (P1's follow-up to P2 counters)
+            html += '<h4 style="color: #c0392b; margin-top: 20px;">Best P1 Follow-Ups (Move 3) to Common Sequences</h4>';
+            const move1And2Seqs = Object.keys(stats.conditionalMoves.move3GivenMove1And2)
+                .map(m1m2 => {
+                    const followUps = stats.conditionalMoves.move3GivenMove1And2[m1m2];
+                    const totalGames = Object.values(followUps).reduce((sum, r) => sum + r.games, 0);
+                    return { sequence: m1m2, totalGames, followUps };
+                })
+                .filter(m => m.totalGames >= 3)
+                .sort((a, b) => b.totalGames - a.totalGames)
+                .slice(0, 10);
+
+            if (move1And2Seqs.length > 0) {
+                html += '<div style="font-family: monospace; font-size: 0.85em;">';
+                move1And2Seqs.forEach(({ sequence, totalGames, followUps }) => {
+                    const sortedFollowUps = Object.keys(followUps)
+                        .map(m3 => {
+                            const data = followUps[m3];
+                            const p1WinRate = (data.p1Wins / data.games) * 100;
+                            return { move3: m3, ...data, p1WinRate };
+                        })
+                        .filter(r => r.games >= 3)
+                        .sort((a, b) => b.p1WinRate - a.p1WinRate)
+                        .slice(0, 3);
+
+                    if (sortedFollowUps.length > 0) {
+                        html += `<div style="margin: 12px 0; padding: 8px; background: #2d2d30; border-radius: 4px;">`;
+                        html += `<strong style="color: #888;">After ${sequence}</strong> (${totalGames} games):<br>`;
+                        sortedFollowUps.forEach((r, idx) => {
+                            html += `&nbsp;&nbsp;${idx + 1}. <strong style="color: #c0392b;">${r.move3}</strong> - `;
+                            html += `${r.p1WinRate.toFixed(1)}% P1 win (${r.p1Wins}W-${r.p2Wins}L, ${r.games} games)<br>`;
+                        });
+                        html += `</div>`;
+                    }
+                });
+                html += '</div>';
+            } else {
+                html += '<div style="color: #888; font-size: 0.85em;">Not enough data yet (need 3+ games per sequence)</div>';
+            }
+
+            // Move 4 given Moves 1-3 (P2's second response)
+            html += '<h4 style="color: #2980b9; margin-top: 20px;">Best P2 Follow-Ups (Move 4) to Common Sequences</h4>';
+            const move1To3Seqs = Object.keys(stats.conditionalMoves.move4GivenMove1To3)
+                .map(m1m2m3 => {
+                    const followUps = stats.conditionalMoves.move4GivenMove1To3[m1m2m3];
+                    const totalGames = Object.values(followUps).reduce((sum, r) => sum + r.games, 0);
+                    return { sequence: m1m2m3, totalGames, followUps };
+                })
+                .filter(m => m.totalGames >= 3)
+                .sort((a, b) => b.totalGames - a.totalGames)
+                .slice(0, 10);
+
+            if (move1To3Seqs.length > 0) {
+                html += '<div style="font-family: monospace; font-size: 0.85em;">';
+                move1To3Seqs.forEach(({ sequence, totalGames, followUps }) => {
+                    const sortedFollowUps = Object.keys(followUps)
+                        .map(m4 => {
+                            const data = followUps[m4];
+                            const p2WinRate = (data.p2Wins / data.games) * 100;
+                            return { move4: m4, ...data, p2WinRate };
+                        })
+                        .filter(r => r.games >= 3)
+                        .sort((a, b) => b.p2WinRate - a.p2WinRate)
+                        .slice(0, 3);
+
+                    if (sortedFollowUps.length > 0) {
+                        html += `<div style="margin: 12px 0; padding: 8px; background: #2d2d30; border-radius: 4px;">`;
+                        html += `<strong style="color: #888;">After ${sequence}</strong> (${totalGames} games):<br>`;
+                        sortedFollowUps.forEach((r, idx) => {
+                            html += `&nbsp;&nbsp;${idx + 1}. <strong style="color: #2980b9;">${r.move4}</strong> - `;
+                            html += `${r.p2WinRate.toFixed(1)}% P2 win (${r.p2Wins}W-${r.p1Wins}L, ${r.games} games)<br>`;
+                        });
+                        html += `</div>`;
+                    }
+                });
+                html += '</div>';
+            } else {
+                html += '<div style="color: #888; font-size: 0.85em;">Not enough data yet (need 3+ games per sequence)</div>';
+            }
+
+            html += '</div>';
+
+            // Append to opening stats
+            document.getElementById('openingStats').innerHTML += html;
+        }
+
+        function generateSpatialPatternAnalysis(stats, totalGames) {
+            let html = '<div style="color: #d4d4d4; font-size: #0.9em; margin-top: 20px; border-top: 2px solid #555; padding-top: 15px;">';
+            html += '<h3 style="color: #ce9178; margin-top: 0;">Spatial Pattern Analysis</h3>';
+
+            // Strategy comparison
+            html += '<h4 style="color: #dcdcaa;">Opening Strategy Comparison</h4>';
+            html += '<div style="font-family: monospace; font-size: 0.85em; margin-bottom: 15px;">';
+
+            Object.keys(stats.spatialPatterns).forEach(pattern => {
+                const data = stats.spatialPatterns[pattern];
+                if (data.count === 0) return;
+
+                const p1WinRate = ((data.p1Wins / data.count) * 100).toFixed(1);
+                const displayName = pattern === 'centerFirst' ? 'Center-First Strategy' :
+                                  pattern === 'edgeFirst' ? 'Edge-First Strategy' : 'Balanced Strategy';
+
+                html += `
+                    <div style="margin: 8px 0;">
+                        <strong>${displayName}</strong>: ${data.count} games<br>
+                        &nbsp;&nbsp;P1 Win Rate: ${p1WinRate}% (${data.p1Wins}W-${data.p2Wins}L)
+                    </div>
+                `;
+            });
+            html += '</div>';
+
+            // Hex occupancy heatmap in board shape
+            html += '<h4 style="color: #dcdcaa;">Hex Occupancy Heatmap (Board Shape)</h4>';
+            html += '<div style="margin: 15px 0; font-size: 0.75em;">';
+            html += '<div style="margin-bottom: 10px; color: #888;">Hover over hexes to see details. Color = P1 win rate when this hex is played.</div>';
+            html += generateHexBoardHeatmap(stats.hexOccupancy, totalGames);
+            html += '</div>';
+
+            html += '</div>';
+
+            // Append to opening stats
+            document.getElementById('openingStats').innerHTML += html;
+        }
+
+        function generateHexBoardHeatmap(hexOccupancy, totalGames) {
+            // Define board structure (row and column positions)
+            const hexLayout = [
+                [0],          // Row 0
+                [1, 2],       // Row 1
+                [3, 4, 5],    // Row 2
+                [6, 7, 8],    // Row 3
+                [9, 10, 11, 12],  // Row 4
+                [13, 14, 15], // Row 5
+                [16, 17],     // Row 6
+                [18]          // Row 7
+            ];
+
+            let html = '<div style="display: flex; flex-direction: column; align-items: center; background: #1e1e1e; padding: 20px; border-radius: 8px;">';
+
+            hexLayout.forEach((row, rowIdx) => {
+                html += '<div style="display: flex; gap: 5px; margin: 2px 0;">';
+
+                row.forEach(hexId => {
+                    const data = hexOccupancy[hexId];
+                    const p1WinRate = data.total > 0 ? (data.p1Wins / data.total) * 100 : 50;
+                    const playRate = data.total > 0 ? (data.total / totalGames) * 100 : 0;
+                    const avgMove = data.avgMoveNumber.toFixed(1);
+
+                    // Color scale: red (P2 favored) -> yellow (neutral) -> green (P1 favored)
+                    let color;
+                    if (p1WinRate >= 60) color = '#27ae60';
+                    else if (p1WinRate >= 55) color = '#52c41a';
+                    else if (p1WinRate >= 50) color = '#95de64';
+                    else if (p1WinRate >= 45) color = '#ffd666';
+                    else if (p1WinRate >= 40) color = '#ffa940';
+                    else color = '#ff4d4f';
+
+                    if (data.total === 0) color = '#444'; // Not played
+
+                    const opacity = Math.min(1, 0.3 + (playRate / 100) * 0.7); // More played = more opaque
+
+                    html += `
+                        <div style="
+                            width: 50px;
+                            height: 50px;
+                            background: ${color};
+                            opacity: ${opacity};
+                            border-radius: 8px;
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 11px;
+                            color: #000;
+                            font-weight: bold;
+                            cursor: help;
+                            border: 1px solid #666;
+                        " title="Hex ${hexId}&#10;Played: ${data.total} times (${playRate.toFixed(1)}%)&#10;P1 Win Rate: ${p1WinRate.toFixed(1)}%&#10;Avg Move #: ${avgMove}">
+                            <div>${hexId}</div>
+                            <div style="font-size: 9px;">${p1WinRate.toFixed(0)}%</div>
+                        </div>
+                    `;
+                });
+
+                html += '</div>';
+            });
+
+            html += '</div>';
+
+            // Legend
+            html += '<div style="margin-top: 15px; font-size: 0.85em; color: #888;">';
+            html += '<strong>Legend:</strong> ';
+            html += '<span style="color: #27ae60;">■</span> P1 Favored (60%+) | ';
+            html += '<span style="color: #95de64;">■</span> Neutral (45-55%) | ';
+            html += '<span style="color: #ff4d4f;">■</span> P2 Favored (40%-) | ';
+            html += 'Opacity = Play Frequency';
+            html += '</div>';
+
+            return html;
+        }
+
+        // Download functionality
+        document.getElementById('downloadResultsBtn').addEventListener('click', downloadResultsJSON);
+        document.getElementById('downloadResultsCSVBtn').addEventListener('click', downloadResultsCSV);
+        document.getElementById('downloadGameLogsBtn').addEventListener('click', downloadCompleteGameLogs);
+        document.getElementById('downloadExhaustiveBtn').addEventListener('click', downloadExhaustiveOpeningAnalysis);
+
+        function downloadResultsJSON() {
+            if (!lastSimulationStats) {
+                alert('No simulation results to download');
+                return;
+            }
+
+            // Create downloadable JSON
+            const dataStr = JSON.stringify(lastSimulationStats, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            const filename = `hexuki_sim_${lastSimulationStats.gameCount}games_${timestamp}.json`;
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function downloadResultsCSV() {
+            if (!lastSimulationStats) {
+                alert('No simulation results to download');
+                return;
+            }
+
+            const stats = lastSimulationStats.stats;
+            const gameCount = lastSimulationStats.gameCount;
+
+            let csv = '';
+
+            // Header info
+            csv += `HEXUKI Simulation Results\n`;
+            csv += `Timestamp,${lastSimulationStats.timestamp}\n`;
+            csv += `Games Played,${gameCount}\n`;
+            csv += `Elapsed Time,${lastSimulationStats.elapsedTime}s\n`;
+            csv += `MCTS Simulations,${lastSimulationStats.config.mctsSims}\n`;
+            csv += `Minimax Endgame,${lastSimulationStats.config.useMinimaxEndgame}\n`;
+            csv += `\n`;
+
+            // Overall stats
+            csv += `OVERALL STATISTICS\n`;
+            csv += `Player,Wins,Win %,Avg Score,Draws\n`;
+            csv += `Player 1,${stats.p1Wins},${((stats.p1Wins/gameCount)*100).toFixed(1)}%,${(stats.p1TotalScore/gameCount).toFixed(1)},${stats.draws}\n`;
+            csv += `Player 2,${stats.p2Wins},${((stats.p2Wins/gameCount)*100).toFixed(1)}%,${(stats.p2TotalScore/gameCount).toFixed(1)},${stats.draws}\n`;
+            csv += `\n`;
+
+            // Opening analysis
+            csv += `OPENING ANALYSIS (First 4 Moves)\n`;
+            csv += `Opening Sequence,Games,P1 Wins,P2 Wins,Draws,P1 Win %,Avg Score Diff\n`;
+            Object.keys(stats.openings)
+                .map(key => ({
+                    key,
+                    ...stats.openings[key],
+                    winRate: (stats.openings[key].p1Wins / stats.openings[key].games) * 100,
+                    avgDiff: stats.openings[key].totalDiff / stats.openings[key].games
+                }))
+                .sort((a, b) => b.games - a.games)
+                .forEach(o => {
+                    csv += `"${o.key}",${o.games},${o.p1Wins},${o.p2Wins},${o.draws},${o.winRate.toFixed(1)}%,${o.avgDiff.toFixed(1)}\n`;
+                });
+            csv += `\n`;
+
+            // Move 1 stats (P1's opening)
+            csv += `MOVE 1 ANALYSIS (P1 Opening Moves)\n`;
+            csv += `Move,Games,P1 Wins,P2 Wins,Draws,P1 Win %,Avg Score Diff\n`;
+            Object.keys(stats.move1Stats)
+                .map(key => ({
+                    key,
+                    ...stats.move1Stats[key],
+                    winRate: (stats.move1Stats[key].p1Wins / stats.move1Stats[key].games) * 100,
+                    avgDiff: stats.move1Stats[key].totalDiff / stats.move1Stats[key].games
+                }))
+                .sort((a, b) => b.games - a.games)
+                .forEach(m => {
+                    csv += `${m.key},${m.games},${m.p1Wins},${m.p2Wins},${m.draws},${m.winRate.toFixed(1)}%,${m.avgDiff.toFixed(1)}\n`;
+                });
+            csv += `\n`;
+
+            // Move 2 stats (P2's first move)
+            csv += `MOVE 2 ANALYSIS (P2 First Moves)\n`;
+            csv += `Move,Games,P1 Wins,P2 Wins,Draws,P2 Win %,Avg Score Diff (P1 perspective)\n`;
+            Object.keys(stats.move2Stats)
+                .map(key => ({
+                    key,
+                    ...stats.move2Stats[key],
+                    winRate: (stats.move2Stats[key].p2Wins / stats.move2Stats[key].games) * 100,
+                    avgDiff: stats.move2Stats[key].totalDiff / stats.move2Stats[key].games
+                }))
+                .sort((a, b) => b.games - a.games)
+                .forEach(m => {
+                    csv += `${m.key},${m.games},${m.p1Wins},${m.p2Wins},${m.draws},${m.winRate.toFixed(1)}%,${m.avgDiff.toFixed(1)}\n`;
+                });
+            csv += `\n`;
+
+            // Hex occupancy heatmap
+            csv += `HEX OCCUPANCY HEATMAP\n`;
+            csv += `Hex ID,Times Played,P1 Wins,P2 Wins,P1 Win %,Avg Move Number\n`;
+            stats.hexOccupancy.forEach((data, hexId) => {
+                if (data.total > 0) {
+                    const p1WinRate = ((data.p1Wins / data.total) * 100).toFixed(1);
+                    csv += `${hexId},${data.total},${data.p1Wins},${data.p2Wins},${p1WinRate}%,${data.avgMoveNumber.toFixed(1)}\n`;
+                }
+            });
+            csv += `\n`;
+
+            // Counter-move analysis
+            csv += `COUNTER-MOVE ANALYSIS (P2 Responses to P1 Openings)\n`;
+            csv += `P1 Opening,P2 Response,Games,P1 Wins,P2 Wins,Draws,P2 Win %\n`;
+            Object.keys(stats.conditionalMoves.move2GivenMove1).forEach(m1 => {
+                const responses = stats.conditionalMoves.move2GivenMove1[m1];
+                Object.keys(responses)
+                    .map(m2 => ({
+                        m1,
+                        m2,
+                        ...responses[m2],
+                        p2WinRate: (responses[m2].p2Wins / responses[m2].games) * 100
+                    }))
+                    .sort((a, b) => b.games - a.games)
+                    .forEach(r => {
+                        csv += `${r.m1},${r.m2},${r.games},${r.p1Wins},${r.p2Wins},${r.draws},${r.p2WinRate.toFixed(1)}%\n`;
+                    });
+            });
+
+            // Create download
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            const filename = `hexuki_sim_${lastSimulationStats.gameCount}games_${timestamp}.csv`;
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function downloadCompleteGameLogs() {
+            if (!completeGameLogs || completeGameLogs.length === 0) {
+                alert('No game logs to download');
+                return;
+            }
+
+            // Create comprehensive game log export
+            const exportData = {
+                metadata: {
+                    timestamp: lastSimulationStats ? lastSimulationStats.timestamp : new Date().toISOString(),
+                    totalGames: completeGameLogs.length,
+                    config: lastSimulationStats ? lastSimulationStats.config : {
+                        mctsSims: mctsSims,
+                        useMinimaxEndgame: useMinimaxEndgame,
+                        minimaxThreshold: minimaxThreshold
+                    }
+                },
+                summary: lastSimulationStats ? {
+                    p1Wins: lastSimulationStats.stats.p1Wins,
+                    p2Wins: lastSimulationStats.stats.p2Wins,
+                    draws: lastSimulationStats.stats.draws,
+                    avgP1Score: (lastSimulationStats.stats.p1TotalScore / lastSimulationStats.gameCount).toFixed(1),
+                    avgP2Score: (lastSimulationStats.stats.p2TotalScore / lastSimulationStats.gameCount).toFixed(1)
+                } : null,
+                games: completeGameLogs
+            };
+
+            // Create downloadable JSON
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            const filename = `hexuki_gamelogs_${completeGameLogs.length}games_${timestamp}.json`;
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            console.log(`Downloaded complete logs for ${completeGameLogs.length} games (${(blob.size / 1024).toFixed(1)} KB)`);
+        }
+
+        function downloadExhaustiveOpeningAnalysis() {
+            if (!lastSimulationStats || !lastSimulationStats.exhaustiveOpeningStats) {
+                alert('No exhaustive opening data to download');
+                return;
+            }
+
+            const exhaustiveStats = lastSimulationStats.exhaustiveOpeningStats;
+
+            // Convert exhaustive stats to sorted array
+            const openingsArray = Object.keys(exhaustiveStats)
+                .map(key => {
+                    const stat = exhaustiveStats[key];
+                    const p1WinRate = stat.games > 0 ? (stat.p1Wins / stat.games) * 100 : 0;
+                    const avgP1Score = stat.games > 0 ? stat.p1TotalScore / stat.games : 0;
+                    const avgP2Score = stat.games > 0 ? stat.p2TotalScore / stat.games : 0;
+
+                    // Find most common P2 response
+                    let bestP2Response = null;
+                    let bestP2ResponseCount = 0;
+                    let bestP2ResponseWinRate = 0;
+                    Object.keys(stat.move2Responses).forEach(move => {
+                        const resp = stat.move2Responses[move];
+                        if (resp.count > bestP2ResponseCount) {
+                            bestP2ResponseCount = resp.count;
+                            bestP2Response = move;
+                            bestP2ResponseWinRate = resp.count > 0 ? (resp.p2Wins / resp.count) * 100 : 0;
+                        }
+                    });
+
+                    // Find best P1 move 3
+                    let bestP1Move3 = null;
+                    let bestP1Move3WinRate = 0;
+                    let bestP1Move3Count = 0;
+                    Object.keys(stat.move3Choices).forEach(move => {
+                        const choice = stat.move3Choices[move];
+                        const winRate = choice.count > 0 ? (choice.p1Wins / choice.count) * 100 : 0;
+                        if (choice.count >= 3 && winRate > bestP1Move3WinRate) {
+                            bestP1Move3WinRate = winRate;
+                            bestP1Move3 = move;
+                            bestP1Move3Count = choice.count;
+                        }
+                    });
+
+                    return {
+                        opening: key,
+                        hexId: stat.hexId,
+                        tileValue: stat.tileValue,
+                        games: stat.games,
+                        p1Wins: stat.p1Wins,
+                        p2Wins: stat.p2Wins,
+                        draws: stat.draws,
+                        p1WinRate: p1WinRate,
+                        avgScoreDiff: stat.avgScoreDiff,
+                        avgP1Score: avgP1Score,
+                        avgP2Score: avgP2Score,
+                        bestP2Response: bestP2Response,
+                        bestP2ResponseCount: bestP2ResponseCount,
+                        bestP2ResponseWinRate: bestP2ResponseWinRate,
+                        bestP1Move3: bestP1Move3,
+                        bestP1Move3WinRate: bestP1Move3WinRate,
+                        bestP1Move3Count: bestP1Move3Count,
+                        move2Responses: stat.move2Responses,
+                        move3Choices: stat.move3Choices
+                    };
+                })
+                .sort((a, b) => b.p1WinRate - a.p1WinRate);
+
+            // Create CSV export
+            let csv = 'HEXUKI EXHAUSTIVE OPENING ANALYSIS\n';
+            csv += `Timestamp,${lastSimulationStats.timestamp}\n`;
+            csv += `Total Openings Tested,${openingsArray.length}\n`;
+            csv += `Games Per Opening,${lastSimulationStats.config.gamesPerOpening}\n`;
+            csv += `Total Games,${lastSimulationStats.gameCount}\n`;
+            csv += `MCTS Simulations,${lastSimulationStats.config.mctsSims}\n`;
+            csv += `P2 Move 2 Simulations,${lastSimulationStats.config.p2Move2Simulations}\n`;
+            csv += `Minimax Threshold,${lastSimulationStats.config.minimaxThreshold} empty hexes\n`;
+            csv += `Strong Openings Only,${lastSimulationStats.config.useStrongOpeningsOnly}\n`;
+            csv += `Random Good Openings,${lastSimulationStats.config.useRandomGoodOpenings || false}\n`;
+            csv += `Top 10 Openings,${lastSimulationStats.config.useTop10Openings || false}\n`;
+            csv += `Double MCTS for P2 Move 2,${lastSimulationStats.config.doubleMCTSForP2Move2}\n`;
+            csv += `P2 Learning Mode,${lastSimulationStats.config.useP2LearningMode}\n`;
+            csv += `Mutual Learning Mode,${lastSimulationStats.config.useMutualLearning}\n`;
+            csv += `\n`;
+
+            // Add mutual blacklist info if mutual learning was used
+            if (lastSimulationStats.config.useMutualLearning && lastSimulationStats.mutualBlacklist) {
+                csv += 'MUTUAL LEARNING BLACKLISTS (Context-aware sequences that lost)\n';
+                csv += '\n';
+
+                // P1 Blacklist
+                const p1Blacklisted = Object.keys(lastSimulationStats.mutualBlacklist.p1);
+                csv += `P1 BLACKLISTED SEQUENCES (Total: ${p1Blacklisted.length})\n`;
+                csv += 'Full Sequence (P1-P2-P1-P2-P1)\n';
+                p1Blacklisted.forEach(seq => {
+                    csv += `"${seq}"\n`;
+                });
+                csv += '\n';
+
+                // P2 Blacklist
+                const p2Blacklisted = Object.keys(lastSimulationStats.mutualBlacklist.p2);
+                csv += `P2 BLACKLISTED SEQUENCES (Total: ${p2Blacklisted.length})\n`;
+                csv += 'Full Sequence (P1-P2-P1-P2-P1-P2)\n';
+                p2Blacklisted.forEach(seq => {
+                    csv += `"${seq}"\n`;
+                });
+                csv += '\n';
+            }
+
+            // Add blacklist info if P2 learning mode was used
+            if (lastSimulationStats.config.useP2LearningMode && lastSimulationStats.p2ResponseBlacklist) {
+                if (lastSimulationStats.config.useRandomGoodOpenings && lastSimulationStats.p2ResponseBlacklist.global) {
+                    // Global blacklist for random good openings mode
+                    csv += 'P2 GLOBAL BLACKLIST (Responses that lost and were avoided across all openings)\n';
+                    csv += `Blacklisted Responses,"${lastSimulationStats.p2ResponseBlacklist.global.join(', ')}"\n`;
+                    csv += `Total Blacklisted,${lastSimulationStats.p2ResponseBlacklist.global.length}\n`;
+                } else {
+                    // Per-opening blacklist for exhaustive mode
+                    csv += 'P2 RESPONSE BLACKLIST (Responses that lost and were avoided)\n';
+                    csv += 'P1 Opening,Blacklisted P2 Responses,Count\n';
+                    Object.keys(lastSimulationStats.p2ResponseBlacklist).forEach(opening => {
+                        const blacklist = lastSimulationStats.p2ResponseBlacklist[opening];
+                        if (blacklist && blacklist.length > 0) {
+                            csv += `${opening},"${blacklist.join(', ')}",${blacklist.length}\n`;
+                        }
+                    });
+                }
+                csv += `\n`;
+            }
+
+            csv += 'OPENING RANKINGS (Sorted by P1 Win Rate)\n';
+            csv += 'Rank,Opening,Hex,Tile,Games,P1 Wins,P2 Wins,Draws,P1 Win %,Avg Score Diff,Avg P1 Score,Avg P2 Score,Best P2 Response,P2 Response Count,P2 Response Win %,Best P1 Move 3,Move 3 Win %,Move 3 Count\n';
+
+            openingsArray.forEach((opening, idx) => {
+                csv += `${idx + 1},${opening.opening},${opening.hexId},${opening.tileValue},${opening.games},${opening.p1Wins},${opening.p2Wins},${opening.draws},${opening.p1WinRate.toFixed(1)}%,${opening.avgScoreDiff.toFixed(1)},${opening.avgP1Score.toFixed(1)},${opening.avgP2Score.toFixed(1)},${opening.bestP2Response || 'N/A'},${opening.bestP2ResponseCount || 0},${opening.bestP2ResponseWinRate.toFixed(1)}%,${opening.bestP1Move3 || 'N/A'},${opening.bestP1Move3WinRate.toFixed(1)}%,${opening.bestP1Move3Count || 0}\n`;
+            });
+            csv += '\n';
+
+            // Detailed opening breakdown
+            csv += 'DETAILED OPENING BREAKDOWN\n\n';
+            openingsArray.slice(0, 20).forEach(opening => {
+                csv += `=== ${opening.opening} ===\n`;
+                csv += `Games: ${opening.games} | P1 Win Rate: ${opening.p1WinRate.toFixed(1)}% | Avg Score Diff: ${opening.avgScoreDiff.toFixed(1)}\n`;
+
+                csv += '\nP2 Responses:\n';
+                csv += 'Move,Count,P1 Wins,P2 Wins,P2 Win %\n';
+                Object.keys(opening.move2Responses)
+                    .map(move => ({
+                        move,
+                        ...opening.move2Responses[move],
+                        p2WinRate: (opening.move2Responses[move].p2Wins / opening.move2Responses[move].count) * 100
+                    }))
+                    .sort((a, b) => b.count - a.count)
+                    .forEach(resp => {
+                        csv += `${resp.move},${resp.count},${resp.p1Wins},${resp.p2Wins},${resp.p2WinRate.toFixed(1)}%\n`;
+                    });
+
+                csv += '\nP1 Move 3 Choices:\n';
+                csv += 'Move,Count,P1 Wins,P2 Wins,P1 Win %\n';
+                Object.keys(opening.move3Choices)
+                    .map(move => ({
+                        move,
+                        ...opening.move3Choices[move],
+                        p1WinRate: (opening.move3Choices[move].p1Wins / opening.move3Choices[move].count) * 100
+                    }))
+                    .sort((a, b) => b.count - a.count)
+                    .forEach(choice => {
+                        csv += `${choice.move},${choice.count},${choice.p1Wins},${choice.p2Wins},${choice.p1WinRate.toFixed(1)}%\n`;
+                    });
+
+                csv += '\n';
+            });
+
+            // Create downloadable CSV
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            const filename = `hexuki_exhaustive_openings_${openingsArray.length}openings_${timestamp}.csv`;
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            console.log(`Downloaded exhaustive opening analysis: ${openingsArray.length} openings tested`);
+        }
+    </script>
+</body>
+</html>

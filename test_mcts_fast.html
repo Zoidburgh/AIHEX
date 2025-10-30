@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HEXUKI MCTS - Fast Test</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+
+        h1 {
+            text-align: center;
+            color: #00ff00;
+        }
+
+        .test-section {
+            background: #0a0a0a;
+            border: 2px solid #00ff00;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #00cc00;
+        }
+
+        button:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        pre {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            color: #00ff00;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .good { color: #00ff00; }
+        .bad { color: #ff0000; }
+        .warn { color: #ffff00; }
+
+        .progress {
+            color: #ffff00;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>⚡ HEXUKI MCTS - Fast Performance Test</h1>
+
+    <div class="test-section">
+        <h2>Quick Strength Test (Low Simulations)</h2>
+        <p>Tests whether more simulations = stronger play, using practical simulation counts</p>
+
+        <button onclick="quickStrengthTest()" id="testBtn">
+            Run: 100 vs 500 vs 2000 sims (3 games)
+        </button>
+
+        <div id="progress" class="progress" style="display:none;"></div>
+        <pre id="results"></pre>
+    </div>
+
+    <div class="test-section">
+        <h2>Performance Benchmark</h2>
+        <p>Measure how fast MCTS can run simulations</p>
+
+        <button onclick="performanceBench()" id="perfBtn">
+            Benchmark Performance
+        </button>
+
+        <pre id="perfResults"></pre>
+    </div>
+
+    <script src="hexuki_game_engine_v2.js"></script>
+    <script src="mcts_ai_player.js"></script>
+    <script>
+        function setProgress(text) {
+            const prog = document.getElementById('progress');
+            prog.textContent = text;
+            prog.style.display = 'block';
+        }
+
+        function clearProgress() {
+            document.getElementById('progress').style.display = 'none';
+        }
+
+        async function quickStrengthTest() {
+            const btn = document.getElementById('testBtn');
+            const output = document.getElementById('results');
+
+            btn.disabled = true;
+            output.textContent = 'Starting strength test...\n\n';
+
+            // Use setTimeout to allow UI updates
+            await sleep(100);
+
+            const configs = [
+                {name: '100', sims: 100},
+                {name: '500', sims: 500},
+                {name: '2000', sims: 2000}
+            ];
+
+            const matchups = [
+                {p1: 0, p2: 1, name: '100 vs 500'},
+                {p1: 1, p2: 2, name: '500 vs 2000'},
+                {p1: 0, p2: 2, name: '100 vs 2000'}
+            ];
+
+            for (let matchup of matchups) {
+                const p1Config = configs[matchup.p1];
+                const p2Config = configs[matchup.p2];
+
+                output.textContent += `\n=== ${matchup.name} ===\n`;
+                setProgress(`Testing ${matchup.name}...`);
+                await sleep(50);
+
+                const start = Date.now();
+                const result = playMCTSGame(p1Config.sims, p2Config.sims, false);
+                const elapsed = Date.now() - start;
+
+                const winner = result.winner === 1 ? p1Config.name :
+                              result.winner === 2 ? p2Config.name : 'DRAW';
+
+                output.textContent += `Winner: ${winner}\n`;
+                output.textContent += `Score: ${result.scores.player1} - ${result.scores.player2}\n`;
+                output.textContent += `Time: ${(elapsed / 1000).toFixed(1)}s\n`;
+            }
+
+            output.textContent += '\n=== ANALYSIS ===\n';
+            output.textContent += 'If MCTS is working correctly:\n';
+            output.textContent += '  • 500 should beat 100\n';
+            output.textContent += '  • 2000 should beat 500\n';
+            output.textContent += '  • 2000 should definitely beat 100\n';
+
+            clearProgress();
+            btn.disabled = false;
+        }
+
+        async function performanceBench() {
+            const btn = document.getElementById('perfBtn');
+            const output = document.getElementById('perfResults');
+
+            btn.disabled = true;
+            output.textContent = 'Running performance benchmark...\n\n';
+
+            await sleep(100);
+
+            // Test 1: Single simulation speed
+            const game = new HexukiGameEngineV2();
+            const ai = new MCTSPlayer(1);
+
+            const start1 = Date.now();
+            ai.getBestMove(game);
+            const time1 = Date.now() - start1;
+
+            output.textContent += `Single simulation: ${time1}ms\n\n`;
+
+            // Test 2: 100 simulations
+            setProgress('100 simulations...');
+            await sleep(50);
+
+            const ai100 = new MCTSPlayer(100);
+            const start100 = Date.now();
+            ai100.getBestMove(game);
+            const time100 = Date.now() - start100;
+
+            output.textContent += `100 simulations: ${time100}ms\n`;
+            output.textContent += `  → ${(time100 / 100).toFixed(1)}ms per simulation\n\n`;
+
+            // Test 3: 1000 simulations
+            setProgress('1000 simulations...');
+            await sleep(50);
+
+            const ai1k = new MCTSPlayer(1000);
+            const start1k = Date.now();
+            const result1k = ai1k.getBestMove(game);
+            const time1k = Date.now() - start1k;
+
+            output.textContent += `1000 simulations: ${time1k}ms\n`;
+            output.textContent += `  → ${(time1k / 1000).toFixed(1)}ms per simulation\n`;
+            output.textContent += `  → Best move: Hex ${result1k.move.hexId}, Tile ${result1k.move.tileValue}\n`;
+            output.textContent += `  → Win rate: ${(result1k.stats.winRate * 100).toFixed(1)}%\n\n`;
+
+            // Estimate time for larger runs
+            const avgSimTime = time1k / 1000;
+            output.textContent += `=== Estimated Times ===\n`;
+            output.textContent += `10,000 sims per move: ~${(avgSimTime * 10000 / 1000).toFixed(1)}s\n`;
+            output.textContent += `Full game (18 moves) at 10K: ~${(avgSimTime * 10000 * 18 / 1000).toFixed(0)}s\n`;
+            output.textContent += `Full game (18 moves) at 1K: ~${(avgSimTime * 1000 * 18 / 1000).toFixed(0)}s\n`;
+
+            clearProgress();
+            btn.disabled = false;
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+    </script>
+</body>
+</html>

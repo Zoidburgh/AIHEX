@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Script Loading</title>
+</head>
+<body>
+    <h1>Testing Script Load</h1>
+    <div id="output"></div>
+
+    <script src="hexuki_game_engine_v2.js"></script>
+    <script src="mcts_ai_player.js"></script>
+    <script src="minimax_endgame_optimized.js"></script>
+    <script>
+        const output = document.getElementById('output');
+
+        try {
+            output.innerHTML += '<p>✓ Scripts loaded</p>';
+
+            // Test game engine
+            const game = new HexukiGameEngineV2();
+            output.innerHTML += '<p>✓ Game engine works</p>';
+
+            // Test MCTS
+            const ai = new MCTSPlayer(100);
+            output.innerHTML += '<p>✓ MCTS player created</p>';
+
+            // Test async getBestMove
+            (async () => {
+                try {
+                    const result = await ai.getBestMove(game);
+                    output.innerHTML += '<p>✓ MCTS getBestMove() works (async)</p>';
+                    output.innerHTML += `<p>Best move: Hex ${result.move.hexId}, Tile ${result.move.tileValue}</p>`;
+                } catch (error) {
+                    output.innerHTML += `<p style="color: red;">✗ MCTS error: ${error.message}</p>`;
+                    console.error(error);
+                }
+            })();
+
+        } catch (error) {
+            output.innerHTML += `<p style="color: red;">✗ Error: ${error.message}</p>`;
+            console.error(error);
+        }
+    </script>
+</body>
+</html>

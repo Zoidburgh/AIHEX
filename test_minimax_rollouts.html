@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Minimax Rollouts Test - Pure MCTS vs Hybrid MCTS</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
+            background: #1a1a2e;
+            color: #eee;
+        }
+        h1 {
+            color: #00ff88;
+            text-align: center;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        .controls {
+            background: #16213e;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .control-row {
+            margin: 15px 0;
+        }
+        label {
+            display: inline-block;
+            width: 200px;
+            font-weight: bold;
+        }
+        select, input[type="range"], button {
+            padding: 8px;
+            font-size: 14px;
+        }
+        button {
+            background: #00ff88;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 5px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #00dd77;
+        }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        .comparison {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .panel {
+            background: #16213e;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        .panel.pure {
+            border: 3px solid #ff6b6b;
+        }
+        .panel.hybrid {
+            border: 3px solid #00ff88;
+        }
+        .panel h2 {
+            margin-top: 0;
+            text-align: center;
+        }
+        .panel.pure h2 {
+            color: #ff6b6b;
+        }
+        .panel.hybrid h2 {
+            color: #00ff88;
+        }
+        .stats {
+            background: #0f1626;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+        }
+        .stats div {
+            margin: 5px 0;
+        }
+        .move-list {
+            margin-top: 15px;
+        }
+        .move-item {
+            background: #0f1626;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .move-rank {
+            font-weight: bold;
+            color: #00ff88;
+            width: 30px;
+        }
+        .move-details {
+            flex: 1;
+            margin: 0 15px;
+        }
+        .move-stats {
+            text-align: right;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .highlight {
+            background: #2a4a2a;
+        }
+        .difference {
+            text-align: center;
+            background: #16213e;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        .difference h3 {
+            color: #ffd700;
+        }
+        .status {
+            text-align: center;
+            padding: 15px;
+            background: #0f1626;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 18px;
+        }
+        .loading {
+            color: #00ff88;
+        }
+        .error {
+            color: #ff6b6b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔬 Minimax Rollouts Test</h1>
+        <p style="text-align: center; font-size: 18px;">
+            Compare Pure MCTS (random rollouts) vs Hybrid MCTS (minimax rollouts)
+        </p>
+
+        <div class="controls">
+            <div class="control-row">
+                <label>Simulation Count:</label>
+                <select id="simCount">
+                    <option value="10000">10,000 (Quick test)</option>
+                    <option value="50000" selected>50,000 (Good comparison)</option>
+                    <option value="100000">100,000 (High quality)</option>
+                    <option value="500000">500,000 (Maximum quality)</option>
+                </select>
+            </div>
+            <div class="control-row">
+                <label>Minimax Threshold:</label>
+                <input type="range" id="threshold" min="4" max="12" value="7" style="width: 200px;">
+                <span id="thresholdValue">7</span> empty hexes
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button id="runTest" onclick="runTest()" disabled>▶ Run Comparison Test</button>
+                <button id="runMultiple" onclick="runMultipleTests()" disabled>🔄 Run 5 Tests (Average)</button>
+            </div>
+        </div>
+
+        <div class="status" id="status"><span class="loading">Loading WASM engine...</span></div>
+
+        <div class="comparison" id="results" style="display: none;">
+            <div class="panel pure">
+                <h2>❌ Pure MCTS (Random Rollouts)</h2>
+                <div class="stats" id="pureStats"></div>
+                <div class="move-list" id="pureMoves"></div>
+            </div>
+
+            <div class="panel hybrid">
+                <h2>✅ Hybrid MCTS (Minimax Rollouts)</h2>
+                <div class="stats" id="hybridStats"></div>
+                <div class="move-list" id="hybridMoves"></div>
+            </div>
+        </div>
+
+        <div class="difference" id="difference" style="display: none;">
+            <h3>📊 Analysis</h3>
+            <div id="analysisText"></div>
+        </div>
+    </div>
+
+    <script src="hexuki.js?v=13"></script>
+    <script>
+        let wasmModule = null;
+        let testRunning = false;
+        let multipleTestResults = [];
+
+        // Load WASM with cache busting
+        HexukiWasm({
+            locateFile: function(path) {
+                if (path.endsWith('.wasm')) {
+                    return path + '?v=13';
+                }
+                return path;
+            }
+        }).then(module => {
+            wasmModule = module;
+            wasmModule.initialize();
+            console.log('WASM loaded');
+
+            // Enable buttons
+            document.getElementById('runTest').disabled = false;
+            document.getElementById('runMultiple').disabled = false;
+            document.getElementById('status').innerHTML = '<span style="color: #00ff88;">✅ WASM loaded! Ready to test.</span>';
+        }).catch(err => {
+            document.getElementById('status').innerHTML = '<span class="error">❌ Error loading WASM: ' + err.message + '</span>';
+        });
+
+        document.getElementById('threshold').addEventListener('input', (e) => {
+            document.getElementById('thresholdValue').textContent = e.target.value;
+        });
+
+        async function runTest() {
+            if (testRunning) return;
+            testRunning = true;
+
+            document.getElementById('runTest').disabled = true;
+            document.getElementById('runMultiple').disabled = true;
+            document.getElementById('results').style.display = 'none';
+            document.getElementById('difference').style.display = 'none';
+
+            const simCount = parseInt(document.getElementById('simCount').value);
+            const threshold = parseInt(document.getElementById('threshold').value);
+
+            try {
+                // Test 1: Pure MCTS (random rollouts)
+                document.getElementById('status').innerHTML = '<span class="loading">Running Pure MCTS (' + simCount.toLocaleString() + ' sims)...</span>';
+                await sleep(100);
+
+                wasmModule.reset();
+                const pureStart = performance.now();
+                const pureJson = wasmModule.mctsFindBestMove(simCount, 0, false, false, 0);
+                const pureTime = performance.now() - pureStart;
+                const pureResult = JSON.parse(pureJson);
+
+                console.log('Pure MCTS Result:', pureResult);
+
+                // Test 2: Hybrid MCTS (minimax rollouts)
+                document.getElementById('status').innerHTML = '<span class="loading">Running Hybrid MCTS (minimax @ ' + threshold + ' empty)...</span>';
+                await sleep(100);
+
+                wasmModule.reset();
+                const hybridStart = performance.now();
+                const hybridJson = wasmModule.mctsFindBestMove(simCount, 0, false, true, threshold);
+                const hybridTime = performance.now() - hybridStart;
+                const hybridResult = JSON.parse(hybridJson);
+
+                console.log('Hybrid MCTS Result:', hybridResult);
+
+                // Display results
+                displayResults(pureResult, pureTime, hybridResult, hybridTime, threshold);
+
+                document.getElementById('status').innerHTML = '<span style="color: #00ff88;">✅ Test Complete!</span>';
+                document.getElementById('results').style.display = 'grid';
+                document.getElementById('difference').style.display = 'block';
+
+                return { pure: pureResult, hybrid: hybridResult };
+
+            } catch (err) {
+                document.getElementById('status').innerHTML = '<span class="error">Error: ' + err.message + '</span>';
+                console.error(err);
+            } finally {
+                testRunning = false;
+                document.getElementById('runTest').disabled = false;
+                document.getElementById('runMultiple').disabled = false;
+            }
+        }
+
+        async function runMultipleTests() {
+            multipleTestResults = [];
+
+            for (let i = 1; i <= 5; i++) {
+                document.getElementById('status').innerHTML = `<span class="loading">Running test ${i}/5...</span>`;
+                const result = await runTest();
+                if (result) {
+                    multipleTestResults.push(result);
+                }
+                await sleep(1000);
+            }
+
+            // Calculate averages
+            const avgPureWinRate = multipleTestResults.reduce((sum, r) => sum + r.pure.winRate, 0) / 5;
+            const avgHybridWinRate = multipleTestResults.reduce((sum, r) => sum + r.hybrid.winRate, 0) / 5;
+            const avgPureVisits = multipleTestResults.reduce((sum, r) => sum + r.pure.visits, 0) / 5;
+            const avgHybridVisits = multipleTestResults.reduce((sum, r) => sum + r.hybrid.visits, 0) / 5;
+
+            document.getElementById('analysisText').innerHTML += `
+                <div style="margin-top: 20px; padding: 15px; background: #0f1626; border-radius: 5px;">
+                    <h4>5-Test Averages:</h4>
+                    <div>Pure MCTS: ${(avgPureWinRate * 100).toFixed(1)}% win rate, ${Math.round(avgPureVisits).toLocaleString()} visits</div>
+                    <div>Hybrid MCTS: ${(avgHybridWinRate * 100).toFixed(1)}% win rate, ${Math.round(avgHybridVisits).toLocaleString()} visits</div>
+                    <div style="color: #ffd700; margin-top: 10px;">
+                        Improvement: ${((avgHybridWinRate - avgPureWinRate) * 100).toFixed(1)}% win rate,
+                        ${((avgHybridVisits / avgPureVisits - 1) * 100).toFixed(1)}% more visits
+                    </div>
+                </div>
+            `;
+        }
+
+        function displayResults(pureResult, pureTime, hybridResult, hybridTime, threshold) {
+            // Pure MCTS stats
+            document.getElementById('pureStats').innerHTML = `
+                <div><strong>Best Move:</strong> H(${pureResult.hexId})+${pureResult.tileValue}</div>
+                <div><strong>Win Rate:</strong> ${(pureResult.winRate * 100).toFixed(1)}%</div>
+                <div><strong>Visits:</strong> ${pureResult.visits.toLocaleString()}</div>
+                <div><strong>Time:</strong> ${(pureTime / 1000).toFixed(2)}s</div>
+                <div><strong>Speed:</strong> ${Math.round(pureResult.simulations / (pureTime / 1000)).toLocaleString()} sims/sec</div>
+            `;
+
+            // Hybrid MCTS stats
+            document.getElementById('hybridStats').innerHTML = `
+                <div><strong>Best Move:</strong> H(${hybridResult.hexId})+${hybridResult.tileValue}</div>
+                <div><strong>Win Rate:</strong> ${(hybridResult.winRate * 100).toFixed(1)}%</div>
+                <div><strong>Visits:</strong> ${hybridResult.visits.toLocaleString()}</div>
+                <div><strong>Time:</strong> ${(hybridTime / 1000).toFixed(2)}s</div>
+                <div><strong>Speed:</strong> ${Math.round(hybridResult.simulations / (hybridTime / 1000)).toLocaleString()} sims/sec</div>
+                <div><strong>Threshold:</strong> ${threshold} empty hexes</div>
+            `;
+
+            // Pure MCTS moves
+            let pureMoveHTML = '';
+            if (pureResult.topMoves && pureResult.topMoves.length > 0) {
+                pureResult.topMoves.forEach((m, i) => {
+                    pureMoveHTML += `
+                        <div class="move-item">
+                            <div class="move-rank">#${i+1}</div>
+                            <div class="move-details">H(${m.hexId})+${m.tileValue}</div>
+                            <div class="move-stats">
+                                ${m.visits.toLocaleString()} visits<br>
+                                ${(m.winRate * 100).toFixed(1)}% win rate
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            document.getElementById('pureMoves').innerHTML = pureMoveHTML;
+
+            // Hybrid MCTS moves
+            let hybridMoveHTML = '';
+            if (hybridResult.topMoves && hybridResult.topMoves.length > 0) {
+                hybridResult.topMoves.forEach((m, i) => {
+                    const isTopMove = i === 0;
+                    hybridMoveHTML += `
+                        <div class="move-item ${isTopMove ? 'highlight' : ''}">
+                            <div class="move-rank">#${i+1}</div>
+                            <div class="move-details">H(${m.hexId})+${m.tileValue}</div>
+                            <div class="move-stats">
+                                ${m.visits.toLocaleString()} visits<br>
+                                ${(m.winRate * 100).toFixed(1)}% win rate
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            document.getElementById('hybridMoves').innerHTML = hybridMoveHTML;
+
+            // Analysis
+            const winRateDiff = (hybridResult.winRate - pureResult.winRate) * 100;
+            const visitRatio = hybridResult.visits / pureResult.visits;
+            const sameBestMove = pureResult.hexId === hybridResult.hexId && pureResult.tileValue === hybridResult.tileValue;
+
+            let analysis = '<div style="text-align: left;">';
+
+            if (sameBestMove) {
+                analysis += '<div style="color: #00ff88; margin: 10px 0;">✅ Both methods picked the same move: H(' + pureResult.hexId + ')+' + pureResult.tileValue + '</div>';
+            } else {
+                analysis += '<div style="color: #ffd700; margin: 10px 0;">⚠️ Different moves picked!</div>';
+                analysis += '<div>Pure: H(' + pureResult.hexId + ')+' + pureResult.tileValue + '</div>';
+                analysis += '<div>Hybrid: H(' + hybridResult.hexId + ')+' + hybridResult.tileValue + '</div>';
+            }
+
+            analysis += '<div style="margin: 10px 0;"><strong>Win Rate:</strong> ';
+            if (winRateDiff > 2) {
+                analysis += '<span style="color: #00ff88;">Hybrid is ' + winRateDiff.toFixed(1) + '% higher ✅</span>';
+            } else if (winRateDiff < -2) {
+                analysis += '<span style="color: #ff6b6b;">Pure is ' + Math.abs(winRateDiff).toFixed(1) + '% higher ❌</span>';
+            } else {
+                analysis += '<span style="color: #ffd700;">Similar (' + winRateDiff.toFixed(1) + '% diff)</span>';
+            }
+            analysis += '</div>';
+
+            analysis += '<div style="margin: 10px 0;"><strong>Convergence:</strong> ';
+            if (visitRatio > 1.5) {
+                analysis += '<span style="color: #00ff88;">Hybrid converged ' + visitRatio.toFixed(1) + 'x faster ✅</span>';
+            } else if (visitRatio < 0.67) {
+                analysis += '<span style="color: #ff6b6b;">Pure converged ' + (1/visitRatio).toFixed(1) + 'x faster ❌</span>';
+            } else {
+                analysis += '<span style="color: #ffd700;">Similar convergence</span>';
+            }
+            analysis += '</div>';
+
+            analysis += '<div style="margin: 10px 0;"><strong>Speed Impact:</strong> ';
+            const speedRatio = pureTime / hybridTime;
+            if (speedRatio > 1.2) {
+                analysis += '<span style="color: #ff6b6b;">Hybrid ' + ((speedRatio - 1) * 100).toFixed(0) + '% slower</span>';
+            } else if (speedRatio < 0.8) {
+                analysis += '<span style="color: #00ff88;">Hybrid ' + ((1 - speedRatio) * 100).toFixed(0) + '% faster</span>';
+            } else {
+                analysis += '<span style="color: #00ff88;">Minimal impact (' + ((speedRatio - 1) * 100).toFixed(0) + '%)</span>';
+            }
+            analysis += '</div>';
+
+            analysis += '</div>';
+            document.getElementById('analysisText').innerHTML = analysis;
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+    </script>
+</body>
+</html>

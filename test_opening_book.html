@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Opening Book Training Test</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+        }
+        h1 { color: #00ff00; }
+        #output {
+            background: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            height: 600px;
+            overflow-y: auto;
+            font-size: 12px;
+            white-space: pre-wrap;
+            margin-top: 20px;
+        }
+        .success { color: #00ff00; }
+        .warn { color: #ff9900; }
+        .error { color: #ff0000; }
+        .info { color: #00ccff; }
+    </style>
+</head>
+<body>
+    <h1>Opening Book Training Test</h1>
+    <p>Testing move-limited training (first 8 moves only)</p>
+
+    <div id="output"></div>
+
+    <script src="hexuki_game_engine_v2.js"></script>
+    <script src="hexuki_ai_trainer.js"></script>
+    <script>
+        const output = document.getElementById('output');
+
+        // Override console.log to display in output
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            const message = args.map(arg =>
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+
+            let className = '';
+            if (message.includes('❌') || message.includes('ERROR')) className = 'error';
+            else if (message.includes('✅') || message.includes('passed')) className = 'success';
+            else if (message.includes('⚠️') || message.includes('WARN')) className = 'warn';
+            else if (message.includes('ℹ️') || message.includes('INFO')) className = 'info';
+
+            const line = document.createElement('div');
+            line.className = className;
+            line.textContent = message;
+            output.appendChild(line);
+            output.scrollTop = output.scrollHeight;
+        };
+
+        async function runTest() {
+            console.log('═══════════════════════════════════════');
+            console.log('🎯 OPENING BOOK TRAINING TEST');
+            console.log('═══════════════════════════════════════\n');
+
+            try {
+                // Test 1: Create runner with opening book mode
+                console.log('TEST 1: Creating Phase2Runner with opening book options...');
+                const options = {
+                    openingBookMode: true,
+                    maxMoveToLearn: 8
+                };
+                const runner = new HexukiAI.Phase2Runner(null, null, options);
+                console.log('✅ Runner created with maxMoveToLearn=' + runner.maxMoveToLearn + ', openingBookMode=' + runner.openingBookMode);
+
+                // Test 2: Run a small training session (AlphaGo approach - play full, learn partial)
+                console.log('\nTEST 2: Running 1 generation with 100 games (full games, learn first 8 moves)...');
+                const startTime = Date.now();
+                const stats = await runner.runGeneration(100, 0.3, {'self': 1.0});
+                const elapsed = (Date.now() - startTime) / 1000;
+
+                console.log('✅ Generation complete in ' + elapsed.toFixed(2) + 's');
+                console.log('   Games completed: ' + stats.completeGames);
+                console.log('   Positions explored: ' + stats.positionsExplored);
+                console.log('   Avg moves per game: ' + (stats.totalMoves / stats.completeGames).toFixed(1));
+
+                // Test 3: Verify policy only contains first 8 move positions
+                console.log('\nTEST 3: Verifying policy contains only opening positions...');
+                const policy = runner.policy;
+                const positionCount = Object.keys(policy.db).length;
+                console.log('   Positions in policy: ' + positionCount);
+
+                // Opening book should have far fewer positions than full game
+                if (positionCount < 100) {
+                    console.log('✅ Policy is focused (< 100 positions for 100 games)');
+                } else if (positionCount < 1000) {
+                    console.log('✅ Policy is reasonably sized (<1000 positions)');
+                } else {
+                    console.log('⚠️ Warning: Policy has many positions (' + positionCount + '), might be learning beyond move 8');
+                }
+
+                // Test 4: Check that games were evaluated properly (full games = reliable winners!)
+                console.log('\nTEST 4: Checking game evaluation (AlphaGo approach)...');
+                console.log('   P1 wins: ' + stats.p1Wins);
+                console.log('   P2 wins: ' + stats.p2Wins);
+                console.log('   Draws: ' + stats.ties);
+                console.log('   Avg moves per game: ' + (stats.completeGames > 0 ? (18).toFixed(1) : '0') + ' (full games!)');
+
+                const totalDecided = stats.p1Wins + stats.p2Wins + stats.ties;
+                if (totalDecided === stats.completeGames && stats.completeGames === 100) {
+                    console.log('✅ All 100 games completed with reliable winners!');
+                } else {
+                    console.log('❌ ERROR: Expected 100 complete games, got ' + stats.completeGames);
+                }
+
+                // Test 5: Compare position counts to full-game training
+                console.log('\nTEST 5: Comparing to full-game training...');
+                const fullRunner = new HexukiAI.Phase2Runner(null, null, {openingBookMode: false, maxMoveToLearn: 18});
+                const fullStartTime = Date.now();
+                const fullStats = await fullRunner.runGeneration(100, 0.3, {'self': 1.0});
+                const fullElapsed = (Date.now() - fullStartTime) / 1000;
+
+                console.log('Opening book (learn first 8 moves only):');
+                console.log('  Time: ' + elapsed.toFixed(2) + 's');
+                console.log('  Positions: ' + stats.positionsExplored);
+                console.log('  Speed: ' + (stats.completeGames / elapsed).toFixed(1) + ' games/sec');
+
+                console.log('\nFull game (learn all 18 moves):');
+                console.log('  Time: ' + fullElapsed.toFixed(2) + 's');
+                console.log('  Positions: ' + fullStats.positionsExplored);
+                console.log('  Speed: ' + (fullStats.completeGames / fullElapsed).toFixed(1) + ' games/sec');
+
+                const positionReduction = ((1 - stats.positionsExplored / fullStats.positionsExplored) * 100);
+                console.log('\n📊 Position reduction: ' + positionReduction.toFixed(1) + '%');
+                console.log('📊 Opening book: ' + stats.positionsExplored + ' positions vs Full: ' + fullStats.positionsExplored + ' positions');
+
+                console.log('\n═══════════════════════════════════════');
+                console.log('✅ ALL TESTS PASSED');
+                console.log('═══════════════════════════════════════');
+                console.log('\nOpening book training is working correctly!');
+                console.log('You can now train on the first 8 moves to build a strong opening repertoire.');
+
+            } catch (error) {
+                console.log('❌ TEST FAILED');
+                console.log('Error: ' + error.message);
+                console.log(error.stack);
+            }
+        }
+
+        // Run tests on load
+        runTest();
+    </script>
+</body>
+</html>

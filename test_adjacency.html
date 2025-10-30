@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Adjacency Fix</title>
+</head>
+<body>
+    <h1>Testing Adjacency Fix</h1>
+    <pre id="output"></pre>
+
+    <script src="hexuki_game_engine.js"></script>
+    <script>
+        const output = document.getElementById('output');
+
+        function log(msg) {
+            output.textContent += msg + '\n';
+            console.log(msg);
+        }
+
+        // Test 1: Verify adjacency calculation
+        log('=== TEST 1: Adjacency Calculation ===');
+        const engine = new HexukiGameEngine();
+
+        // Test hex 0 (row: 0, col: 2)
+        const adj0 = engine.getAdjacentHexes(0);
+        log(`Hex 0 adjacent: [${adj0}]`);
+
+        // Test hex 9 (center, row: 4, col: 2)
+        const adj9 = engine.getAdjacentHexes(9);
+        log(`Hex 9 (center) adjacent: [${adj9}]`);
+
+        // Test hex 3 (row: 2, col: 0)
+        const adj3 = engine.getAdjacentHexes(3);
+        log(`Hex 3 adjacent: [${adj3}]`);
+
+        log('');
+
+        // Test 2: Play random games
+        log('=== TEST 2: Random Game Simulation ===');
+        let successCount = 0;
+        let deadlockCount = 0;
+        const numGames = 100;
+
+        for (let i = 0; i < numGames; i++) {
+            const game = new HexukiGameEngine();
+            let moves = 0;
+            const MAX_MOVES = 18;
+
+            while (!game.gameEnded && moves < MAX_MOVES) {
+                const validMoves = game.getAllValidMoves();
+
+                if (validMoves.length === 0) {
+                    log(`Game ${i + 1}: DEADLOCK at move ${moves}`);
+
+                    // Show board state
+                    const occupied = game.board.filter(h => h.value !== null).map(h => h.id);
+                    log(`  Occupied hexes: [${occupied}]`);
+
+                    deadlockCount++;
+                    break;
+                }
+
+                // Make random move
+                const move = validMoves[Math.floor(Math.random() * validMoves.length)];
+                game.makeMove(move.hexId, move.tileValue);
+                moves++;
+            }
+
+            if (game.gameEnded && moves === 18) {
+                successCount++;
+            }
+        }
+
+        log('');
+        log(`=== RESULTS ===`);
+        log(`Games completed: ${successCount}/${numGames}`);
+        log(`Deadlocks: ${deadlockCount}/${numGames}`);
+        log(`Success rate: ${(successCount / numGames * 100).toFixed(1)}%`);
+
+        if (successCount === numGames) {
+            log('');
+            log('✅ ALL GAMES COMPLETED SUCCESSFULLY!');
+        } else {
+            log('');
+            log('❌ Some games had deadlocks - further debugging needed');
+        }
+    </script>
+</body>
+</html>

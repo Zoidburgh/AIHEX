@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Train Policy with Weighted Opening Book</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        .container {
+            background: #252526;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        h1 { color: #4ec9b0; }
+        h2 { color: #569cd6; }
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button:hover { background: #1177bb; }
+        button:disabled {
+            background: #3c3c3c;
+            cursor: not-allowed;
+        }
+        .info-box {
+            background: #2d2d30;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 3px solid #4ec9b0;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-box {
+            background: #2d2d30;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #4ec9b0;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #858585;
+            margin-top: 5px;
+        }
+        #log {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            border: 1px solid #3c3c3c;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #1e1e1e;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0e639c, #1177bb);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+        }
+        input[type="number"], select {
+            padding: 8px;
+            background: #2d2d30;
+            border: 1px solid #3c3c3c;
+            color: #d4d4d4;
+            border-radius: 4px;
+            width: 150px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📚 Policy Training with Weighted Opening Book</h1>
+
+    <div class="container">
+        <h2>Strategy Overview</h2>
+        <div class="info-box">
+            <strong>Smart Opening Selection:</strong><br><br>
+            Instead of using only top 7 openings, this uses ALL 54 openings weighted by performance:<br>
+            • Best openings (70%+ WR): Selected frequently<br>
+            • Good openings (60-70% WR): Selected moderately<br>
+            • Weak openings (50-60% WR): Selected rarely<br>
+            • Bad openings (<50% WR): NEVER selected<br><br>
+            <strong>Training:</strong><br>
+            • Opening: Weighted random from opening book<br>
+            • Midgame: Policy self-play (learns strategy)<br>
+            • Endgame: Live minimax (perfect play)<br><br>
+            <strong>Result:</strong> Policy learns from diverse high-quality positions!
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Load Opening Book</h2>
+        <input type="file" id="openingBookFile" accept=".json">
+        <div id="bookStatus" style="margin: 10px 0; color: #858585;">No opening book loaded</div>
+    </div>
+
+    <div class="container">
+        <h2>Configuration</h2>
+
+        <label>Opening Selection Strategy:</label><br>
+        <select id="selectionStrategy">
+            <option value="weighted">Weighted by Win Rate (Recommended)</option>
+            <option value="top_tier">Top Tier Only (>=65% WR)</option>
+            <option value="all_viable">All Viable (>=50% WR)</option>
+            <option value="uniform">Uniform Random (All 54)</option>
+        </select>
+        <br><br>
+
+        <label>Games to Train:</label><br>
+        <input type="number" id="gamesToTrain" value="1000" min="100" max="50000">
+        <br><br>
+
+        <label>Minimax Threshold:</label><br>
+        <input type="number" id="minimaxThreshold" value="6" min="4" max="10">
+        <span style="color: #858585; margin-left: 10px;">← empty positions</span>
+        <br><br>
+
+        <label>Update Interval:</label><br>
+        <input type="number" id="updateInterval" value="100" min="10" max="1000">
+        <span style="color: #858585; margin-left: 10px;">← games</span>
+    </div>
+
+    <div class="container">
+        <h2>Training Controls</h2>
+        <button onclick="startTraining()" id="startBtn" disabled>Start Training</button>
+        <button onclick="stopTraining()" id="stopBtn" disabled>Stop Training</button>
+        <button onclick="downloadPolicy()" id="downloadBtn" disabled>Download Policy</button>
+        <button onclick="clearLog()">Clear Log</button>
+
+        <div class="progress-bar" style="margin-top: 20px;">
+            <div class="progress-fill" id="progressBar" style="width: 0%">0%</div>
+        </div>
+
+        <div class="stats-grid" id="stats">
+            <div class="stat-box">
+                <div class="stat-value" id="gamesPlayed">0</div>
+                <div class="stat-label">Games Played</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="statesLearned">0</div>
+                <div class="stat-label">States Learned</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="minimaxMoves">0</div>
+                <div class="stat-label">Minimax Moves</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="openingsUsed">0</div>
+                <div class="stat-label">Unique Openings</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Training Log</h2>
+        <div id="log"></div>
+    </div>
+
+    <script src="hexuki_game_engine_v2.js"></script>
+    <script src="minimax_endgame.js"></script>
+    <script>
+        let openingBook = null;
+        let policy = null;
+        let isTraining = false;
+        let gamesCompleted = 0;
+        let minimaxMovesCount = 0;
+        let openingsUsedSet = new Set();
+
+        // Load opening book
+        document.getElementById('openingBookFile').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    openingBook = JSON.parse(event.target.result);
+                    document.getElementById('bookStatus').innerHTML =
+                        `<span style="color: #4ec9b0;">✓ Loaded: ${openingBook.totalGames} games, ${Object.keys(openingBook.openings).length} openings</span>`;
+                    document.getElementById('startBtn').disabled = false;
+                    log(`Opening book loaded: ${Object.keys(openingBook.openings).length} openings`);
+
+                    // Show opening distribution
+                    analyzeOpeningBook();
+                } catch (error) {
+                    document.getElementById('bookStatus').innerHTML =
+                        `<span style="color: #f48771;">✗ Error loading opening book</span>`;
+                    log(`Error: ${error.message}`);
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            logDiv.textContent += message + '\n';
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+        }
+
+        function analyzeOpeningBook() {
+            const openings = [];
+            for (const [move, stats] of Object.entries(openingBook.openings)) {
+                const wr = stats.wins / stats.games;
+                openings.push({move, wr, stats});
+            }
+            openings.sort((a, b) => b.wr - a.wr);
+
+            const tier70 = openings.filter(o => o.wr >= 0.70);
+            const tier65 = openings.filter(o => o.wr >= 0.65);
+            const tier60 = openings.filter(o => o.wr >= 0.60);
+            const tier50 = openings.filter(o => o.wr >= 0.50);
+            const below50 = openings.filter(o => o.wr < 0.50);
+
+            log('');
+            log('Opening Book Analysis:');
+            log(`  70%+ WR: ${tier70.length} openings (top tier)`);
+            log(`  65%+ WR: ${tier65.length} openings`);
+            log(`  60%+ WR: ${tier60.length} openings`);
+            log(`  50%+ WR: ${tier50.length} openings (viable)`);
+            log(`  <50% WR: ${below50.length} openings (avoid)`);
+            log('');
+        }
+
+        function selectWeightedOpening(strategy) {
+            const openings = [];
+
+            for (const [move, stats] of Object.entries(openingBook.openings)) {
+                const wr = stats.wins / stats.games;
+
+                // Apply strategy filter
+                let include = true;
+                if (strategy === 'top_tier' && wr < 0.65) include = false;
+                if (strategy === 'all_viable' && wr < 0.50) include = false;
+
+                if (include) {
+                    // Weight by win rate (or uniform for uniform strategy)
+                    const weight = strategy === 'uniform' ? 1.0 : wr;
+                    openings.push({
+                        move: move,
+                        tile: stats.tile,
+                        hexId: stats.hexId,
+                        weight: weight
+                    });
+                }
+            }
+
+            // Weighted random selection
+            const totalWeight = openings.reduce((sum, o) => sum + o.weight, 0);
+            let random = Math.random() * totalWeight;
+
+            for (const opening of openings) {
+                random -= opening.weight;
+                if (random <= 0) {
+                    return opening;
+                }
+            }
+
+            return openings[openings.length - 1]; // Fallback
+        }
+
+        function getStateKey(game) {
+            const turn = game.currentPlayer;
+            const boardState = game.board.map(hex => {
+                if (hex.value === null) return 'null';
+                if (hex.owner === 'neutral') return `${hex.value}p0`;
+                const playerNum = hex.owner === 'player1' ? 1 : 2;
+                return `${hex.value}p${playerNum}`;
+            }).join(',');
+
+            const p1Available = game.player1Tiles.sort((a, b) => a - b).join('');
+            const p2Available = game.player2Tiles.sort((a, b) => a - b).join('');
+            const p1Used = Array.from(game.player1UsedPositions).sort((a, b) => a - b).join('');
+            const p2Used = Array.from(game.player2UsedPositions).sort((a, b) => a - b).join('');
+
+            return `${turn}|${boardState}|p1a:${p1Available}|p2a:${p2Available}|p1u:${p1Used}|p2u:${p2Used}`;
+        }
+
+        // Fisher-Yates shuffle for TRUE randomness
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function choosePolicyMove(game) {
+            const stateKey = getStateKey(game);
+            let legalMoves = game.getAllValidMoves();
+
+            if (legalMoves.length === 0) return null;
+
+            const stateData = policy.database[stateKey];
+
+            if (!stateData) {
+                // PROPERLY SHUFFLE for true randomness!
+                return shuffle(legalMoves)[0];
+            }
+
+            // Find best move by win rate
+            let bestMove = null;
+            let bestScore = -Infinity;
+
+            for (const move of legalMoves) {
+                const moveKey = `t${move.tileValue}h${move.hexId}`;
+                const moveData = stateData[moveKey];
+
+                if (moveData && moveData.totalWeight > 0) {
+                    const winRate = moveData.wins / moveData.totalWeight;
+                    if (winRate > bestScore) {
+                        bestScore = winRate;
+                        bestMove = move;
+                    }
+                }
+            }
+
+            if (!bestMove) {
+                // PROPERLY SHUFFLE for true randomness!
+                bestMove = shuffle(legalMoves)[0];
+            }
+
+            return bestMove;
+        }
+
+        function chooseHybridMove(game, threshold) {
+            const emptyCount = game.board.filter(h => h.value === null).length;
+
+            // Use minimax for endgame
+            if (emptyCount <= threshold) {
+                const solver = new MinimaxEndgameSolver(game);
+                const move = solver.findBestMove(false);
+                if (move) {
+                    minimaxMovesCount++;
+                    return { hexId: move.hexId, tileValue: move.tile, source: 'minimax' };
+                }
+            }
+
+            // Use policy for midgame
+            const move = choosePolicyMove(game);
+            return move ? {...move, source: 'policy'} : null;
+        }
+
+        function playTrainingGame(forcedOpening, threshold) {
+            const game = new HexukiGameEngineV2();
+            const moveHistory = [];
+
+            // Move 1: Forced opening
+            game.makeMove(forcedOpening.hexId, forcedOpening.tileValue);
+            moveHistory.push({
+                player: 1,
+                tile: forcedOpening.tileValue,
+                hexId: forcedOpening.hexId,
+                source: 'opening_book'
+            });
+
+            let moveCount = 1;
+            const maxMoves = 18;
+
+            // Rest of game: hybrid AI
+            while (!game.gameEnded && moveCount < maxMoves) {
+                const move = chooseHybridMove(game, threshold);
+                if (!move) break;
+
+                moveHistory.push({
+                    player: game.currentPlayer,
+                    tile: move.tileValue,
+                    hexId: move.hexId,
+                    source: move.source || 'policy'
+                });
+
+                game.makeMove(move.hexId, move.tileValue);
+                moveCount++;
+            }
+
+            const scores = game.calculateScores();
+            const winner = scores.player1 > scores.player2 ? 1 : scores.player2 > scores.player1 ? 2 : 0;
+
+            return { moveHistory, winner, scores };
+        }
+
+        function recordGame(gameResult) {
+            const game = new HexukiGameEngineV2();
+
+            for (const moveData of gameResult.moveHistory) {
+                const stateKey = getStateKey(game);
+                const moveKey = `t${moveData.tile}h${moveData.hexId}`;
+
+                if (!policy.database[stateKey]) {
+                    policy.database[stateKey] = {};
+                }
+
+                if (!policy.database[stateKey][moveKey]) {
+                    policy.database[stateKey][moveKey] = {
+                        wins: 0,
+                        losses: 0,
+                        ties: 0,
+                        totalWeight: 0,
+                        gamesPlayed: 0,
+                        lastUpdated: Date.now()
+                    };
+                }
+
+                const moveStats = policy.database[stateKey][moveKey];
+                const currentPlayer = moveData.player;
+                const weight = moveData.source === 'minimax' ? 2.0 : 1.0;
+
+                let outcome;
+                if (gameResult.winner === 0) {
+                    outcome = 'tie';
+                } else if (gameResult.winner === currentPlayer) {
+                    outcome = 'win';
+                } else {
+                    outcome = 'loss';
+                }
+
+                if (outcome === 'win') {
+                    moveStats.wins += weight;
+                } else if (outcome === 'loss') {
+                    moveStats.losses += weight;
+                } else {
+                    moveStats.ties += weight;
+                }
+
+                moveStats.totalWeight += weight;
+                moveStats.gamesPlayed += 1;
+                moveStats.lastUpdated = Date.now();
+
+                game.makeMove(moveData.hexId, moveData.tile);
+            }
+        }
+
+        function updateProgress(current, total) {
+            const percent = Math.round((current / total) * 100);
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.width = percent + '%';
+            progressBar.textContent = `${percent}% (${current.toLocaleString()} / ${total.toLocaleString()})`;
+        }
+
+        function updateStats() {
+            document.getElementById('gamesPlayed').textContent = gamesCompleted.toLocaleString();
+            document.getElementById('statesLearned').textContent = Object.keys(policy.database).length.toLocaleString();
+            document.getElementById('minimaxMoves').textContent = minimaxMovesCount.toLocaleString();
+            document.getElementById('openingsUsed').textContent = openingsUsedSet.size;
+        }
+
+        async function startTraining() {
+            if (!openingBook) {
+                log('Please load an opening book first!');
+                return;
+            }
+
+            const gamesToTrain = parseInt(document.getElementById('gamesToTrain').value);
+            const threshold = parseInt(document.getElementById('minimaxThreshold').value);
+            const updateInterval = parseInt(document.getElementById('updateInterval').value);
+            const strategy = document.getElementById('selectionStrategy').value;
+
+            // Initialize policy
+            policy = {
+                version: '2.0',
+                created: new Date().toISOString(),
+                lastUpdated: new Date().toISOString(),
+                totalGamesPlayed: 0,
+                trainingMethod: `weighted_opening_book_${strategy}_minimax`,
+                database: {}
+            };
+
+            gamesCompleted = 0;
+            minimaxMovesCount = 0;
+            openingsUsedSet = new Set();
+            isTraining = true;
+
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('downloadBtn').disabled = true;
+
+            log('='.repeat(80));
+            log(`Starting Policy Training with Opening Book`);
+            log(`Strategy: ${strategy}`);
+            log(`Games: ${gamesToTrain.toLocaleString()}`);
+            log(`Minimax threshold: ${threshold}`);
+            log('='.repeat(80));
+
+            while (isTraining && gamesCompleted < gamesToTrain) {
+                // Select opening
+                const opening = selectWeightedOpening(strategy);
+                openingsUsedSet.add(opening.move);
+
+                // Play game
+                const result = playTrainingGame(opening, threshold);
+
+                // Record in policy
+                recordGame(result);
+
+                gamesCompleted++;
+                policy.totalGamesPlayed = gamesCompleted;
+
+                // Update UI
+                if (gamesCompleted % updateInterval === 0 || gamesCompleted === gamesToTrain) {
+                    updateStats();
+                    updateProgress(gamesCompleted, gamesToTrain);
+                    log(`Game ${gamesCompleted}: Opening ${opening.move}, Winner P${result.winner || 'TIE'}`);
+                    await new Promise(resolve => setTimeout(resolve, 1));
+                }
+            }
+
+            if (isTraining) {
+                log('');
+                log('='.repeat(80));
+                log(`Training complete! ${gamesCompleted.toLocaleString()} games`);
+                log(`States learned: ${Object.keys(policy.database).length.toLocaleString()}`);
+                log(`Minimax moves: ${minimaxMovesCount.toLocaleString()}`);
+                log(`Unique openings used: ${openingsUsedSet.size}`);
+                log('='.repeat(80));
+
+                document.getElementById('downloadBtn').disabled = false;
+            } else {
+                log('Training stopped by user');
+            }
+
+            updateStats();
+            updateProgress(gamesCompleted, gamesToTrain);
+
+            isTraining = false;
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+        }
+
+        function stopTraining() {
+            isTraining = false;
+            log('Stopping training...');
+        }
+
+        function downloadPolicy() {
+            if (!policy) {
+                alert('No policy to download!');
+                return;
+            }
+
+            const timestamp = Date.now();
+            const filename = `hexuki_policy_weighted_openings_${policy.totalGamesPlayed}games_${timestamp}.json`;
+
+            const blob = new Blob([JSON.stringify(policy, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+
+            URL.revokeObjectURL(url);
+
+            log(`Downloaded: ${filename}`);
+        }
+
+        log('Weighted Opening Book Trainer Ready v2.0 (Fisher-Yates Shuffle)');
+        log('Load an opening book to begin');
+        log('');
+        log('If you see v1.0 or no version, do a HARD REFRESH (Ctrl+Shift+R)!');
+    </script>
+</body>
+</html>

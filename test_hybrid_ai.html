@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Hybrid AI (Policy + Minimax Endgame)</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        .container {
+            background: #252526;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        h1 { color: #4ec9b0; }
+        h2 { color: #569cd6; }
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button:hover { background: #1177bb; }
+        button:disabled {
+            background: #3c3c3c;
+            cursor: not-allowed;
+        }
+        #log {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            border: 1px solid #3c3c3c;
+        }
+        .info-box {
+            background: #2d2d30;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 3px solid #4ec9b0;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .stat-box {
+            background: #2d2d30;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4ec9b0;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #858585;
+            margin-top: 5px;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+            padding: 5px;
+        }
+        .minimax-highlight {
+            background: #264f78;
+            padding: 2px 4px;
+            border-radius: 2px;
+        }
+        .policy-highlight {
+            background: #1a4d1a;
+            padding: 2px 4px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 Hybrid AI Test: Policy + Minimax Endgame</h1>
+
+    <div class="container">
+        <h2>Setup</h2>
+        <div class="info-box">
+            <strong>How it works:</strong><br>
+            • Opening/Midgame: Uses trained policy for fast, strategic play<br>
+            • Endgame (≤6 empty positions): Switches to minimax for PERFECT play<br>
+            • Best of both worlds: Strategic early game + perfect endgame
+        </div>
+
+        <label for="policyFile">Load Policy File:</label><br>
+        <input type="file" id="policyFile" accept=".json">
+        <div id="policyStatus" style="margin: 10px 0; color: #858585;">No policy loaded</div>
+
+        <label for="minimaxThreshold">Minimax Threshold (empty positions):</label><br>
+        <input type="number" id="minimaxThreshold" value="6" min="1" max="10" style="padding: 5px; margin: 10px 0;">
+        <span style="color: #858585;">← Switch to minimax when this many or fewer empty positions</span>
+    </div>
+
+    <div class="container">
+        <h2>Test Games</h2>
+        <button onclick="playSingleGame()">Play Single Game</button>
+        <button onclick="playMultipleGames()">Play 10 Games</button>
+        <button onclick="clearLog()">Clear Log</button>
+
+        <div class="stats" id="stats" style="margin-top: 20px; display: none;">
+            <div class="stat-box">
+                <div class="stat-value" id="totalGames">0</div>
+                <div class="stat-label">Total Games</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="avgPolicyMoves">0</div>
+                <div class="stat-label">Avg Policy Moves</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="avgMinimaxMoves">0</div>
+                <div class="stat-label">Avg Minimax Moves</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Game Log</h2>
+        <div id="log"></div>
+    </div>
+
+    <script src="hexuki_game_engine_v2.js"></script>
+    <script src="minimax_endgame.js"></script>
+    <script src="hybrid_ai_player.js"></script>
+    <script>
+        let policy = null;
+        let gameStats = {
+            gamesPlayed: 0,
+            totalPolicyMoves: 0,
+            totalMinimaxMoves: 0
+        };
+
+        // Load policy file
+        document.getElementById('policyFile').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    policy = JSON.parse(event.target.result);
+                    document.getElementById('policyStatus').innerHTML =
+                        `<span style="color: #4ec9b0;">✓ Loaded: ${policy.totalGamesPlayed?.toLocaleString() || 'unknown'} games trained</span>`;
+                    log(`Policy loaded successfully!`);
+                } catch (error) {
+                    document.getElementById('policyStatus').innerHTML =
+                        `<span style="color: #f48771;">✗ Error loading policy</span>`;
+                    log(`Error: ${error.message}`);
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            logDiv.textContent += message + '\n';
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+        }
+
+        function updateStats() {
+            document.getElementById('stats').style.display = 'grid';
+            document.getElementById('totalGames').textContent = gameStats.gamesPlayed;
+
+            const avgPolicy = gameStats.gamesPlayed > 0
+                ? (gameStats.totalPolicyMoves / gameStats.gamesPlayed).toFixed(1)
+                : 0;
+            const avgMinimax = gameStats.gamesPlayed > 0
+                ? (gameStats.totalMinimaxMoves / gameStats.gamesPlayed).toFixed(1)
+                : 0;
+
+            document.getElementById('avgPolicyMoves').textContent = avgPolicy;
+            document.getElementById('avgMinimaxMoves').textContent = avgMinimax;
+        }
+
+        async function playSingleGame() {
+            if (!policy) {
+                log('Please load a policy file first!');
+                return;
+            }
+
+            const threshold = parseInt(document.getElementById('minimaxThreshold').value);
+            log('\n' + '='.repeat(80));
+            log(`Starting game with minimax threshold = ${threshold}`);
+            log('='.repeat(80));
+
+            const game = new HexukiGameEngineV2();
+            const player1AI = new HybridAIPlayer(game, policy, threshold);
+            const player2AI = new HybridAIPlayer(game, policy, threshold);
+
+            let moveCount = 0;
+            const maxMoves = 18; // Safety limit
+
+            while (!game.gameEnded && moveCount < maxMoves) {
+                moveCount++;
+                const currentAI = game.currentPlayer === 1 ? player1AI : player2AI;
+
+                const move = currentAI.chooseMove(0.0); // No exploration
+
+                if (!move) {
+                    log(`No legal moves for Player ${game.currentPlayer}`);
+                    break;
+                }
+
+                const highlight = move.source === 'minimax' ? 'MINIMAX' : 'policy';
+                const color = move.source === 'minimax' ? '🎯' : '📖';
+
+                log(`Move ${moveCount}: Player ${game.currentPlayer} plays t${move.tile}h${move.hexId} ${color} [${highlight}]${move.score !== undefined ? ` (score=${move.score})` : ''}`);
+
+                game.makeMove(move.tile, move.hexId);
+            }
+
+            const scores = game.calculateScores();
+            log('\n' + '-'.repeat(80));
+            log(`GAME OVER`);
+            log(`Player 1 Score: ${scores.player1}`);
+            log(`Player 2 Score: ${scores.player2}`);
+            log(`Winner: ${scores.player1 > scores.player2 ? 'Player 1' : scores.player2 > scores.player1 ? 'Player 2' : 'TIE'}`);
+
+            const p1Stats = player1AI.getStats();
+            const p2Stats = player2AI.getStats();
+            log(`\nMove Sources:`);
+            log(`  Player 1: ${p1Stats.movesFromPolicy} policy, ${p1Stats.movesFromMinimax} minimax`);
+            log(`  Player 2: ${p2Stats.movesFromPolicy} policy, ${p2Stats.movesFromMinimax} minimax`);
+            log('-'.repeat(80));
+
+            // Update stats
+            gameStats.gamesPlayed++;
+            gameStats.totalPolicyMoves += p1Stats.movesFromPolicy + p2Stats.movesFromPolicy;
+            gameStats.totalMinimaxMoves += p1Stats.movesFromMinimax + p2Stats.movesFromMinimax;
+            updateStats();
+        }
+
+        async function playMultipleGames() {
+            if (!policy) {
+                log('Please load a policy file first!');
+                return;
+            }
+
+            log('\n' + '='.repeat(80));
+            log('Playing 10 games...');
+            log('='.repeat(80));
+
+            for (let i = 0; i < 10; i++) {
+                await playSingleGame();
+                // Small delay to prevent blocking
+                await new Promise(resolve => setTimeout(resolve, 10));
+            }
+
+            log('\n' + '='.repeat(80));
+            log('10 games completed!');
+            log('='.repeat(80));
+        }
+
+        // Initial message
+        log('Hybrid AI Test System Ready');
+        log('Load a policy file to begin');
+        log('');
+        log('The AI will use:');
+        log('  📖 Policy-based play for opening/midgame (fast, strategic)');
+        log('  🎯 Minimax search for endgame (perfect play when ≤6 empty positions)');
+    </script>
+</body>
+</html>

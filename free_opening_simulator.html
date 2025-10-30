@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>HEXUKI - Free Opening Simulator</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: white;
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        .subtitle {
+            color: #f0f0f0;
+            text-align: center;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+        }
+        .rule-box {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .rule-box h2 {
+            color: #667eea;
+            margin-top: 0;
+        }
+        .rule-box ul {
+            color: #333;
+            line-height: 1.8;
+        }
+        .sim-panel {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .btn:hover {
+            background: #5568d3;
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        input[type="number"] {
+            padding: 8px;
+            border: 2px solid #667eea;
+            border-radius: 4px;
+            font-size: 14px;
+            width: 100px;
+        }
+        #results {
+            background: #2d2d30;
+            color: #d4d4d4;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-family: 'Consolas', monospace;
+            display: none;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 15px;
+        }
+        .stat-box {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .stat-box h3 {
+            color: #4ec9b0;
+            margin-top: 0;
+        }
+        .progress {
+            color: #569cd6;
+            font-size: 1.1em;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 HEXUKI - Free Opening Mode</h1>
+        <p class="subtitle">P1 can place their first move ANYWHERE on the board</p>
+
+        <div class="rule-box">
+            <h2>📋 Rule Variant</h2>
+            <ul>
+                <li><strong>Move 1 (P1 only):</strong> Can place on ANY of the 18 empty hexes (bypassing adjacency rule)</li>
+                <li><strong>Move 2+:</strong> Normal adjacency, chain length, and antisymmetry rules apply</li>
+                <li><strong>Purpose:</strong> Test if giving P1 more opening flexibility balances the game</li>
+            </ul>
+        </div>
+
+        <div class="sim-panel">
+            <h2>Run Simulation</h2>
+            <div style="margin: 20px 0;">
+                <label>Number of games: <input type="number" id="gameCount" value="50" min="1" max="1000"></label>
+            </div>
+            <div style="margin: 20px 0;">
+                <label>MCTS Simulations per move: <input type="number" id="mctsSims" value="1000" min="100" max="50000" step="100"></label>
+            </div>
+            <div>
+                <button class="btn" id="runBtn">▶️ Run Simulation</button>
+                <button class="btn" id="cancelBtn" style="background: #e74c3c; display: none;">⏹️ Cancel</button>
+            </div>
+        </div>
+
+        <div id="results">
+            <div class="progress" id="progress"></div>
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <h3>Player 1 (Free Opening)</h3>
+                    <div id="p1Stats"></div>
+                </div>
+                <div class="stat-box">
+                    <h3>Player 2</h3>
+                    <div id="p2Stats"></div>
+                </div>
+            </div>
+            <div style="margin-top: 20px;">
+                <h3 style="color: #4ec9b0;">Analysis</h3>
+                <div id="analysis"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="hexuki_game_engine_free_opening.js"></script>
+    <script src="mcts_ai_player.js"></script>
+    <script>
+        let cancelled = false;
+
+        document.getElementById('runBtn').addEventListener('click', runSimulation);
+        document.getElementById('cancelBtn').addEventListener('click', () => {
+            cancelled = true;
+        });
+
+        async function runSimulation() {
+            const gameCount = parseInt(document.getElementById('gameCount').value);
+            const mctsSims = parseInt(document.getElementById('mctsSims').value);
+
+            if (gameCount < 1 || gameCount > 1000) {
+                alert('Please enter 1-1000 games');
+                return;
+            }
+
+            // Show results and disable controls
+            document.getElementById('results').style.display = 'block';
+            document.getElementById('runBtn').disabled = true;
+            document.getElementById('cancelBtn').style.display = 'inline-block';
+            cancelled = false;
+
+            const stats = {
+                p1Wins: 0,
+                p2Wins: 0,
+                draws: 0,
+                p1TotalScore: 0,
+                p2TotalScore: 0,
+                openingHexes: {} // Track which opening hexes P1 uses
+            };
+
+            const startTime = Date.now();
+
+            for (let i = 1; i <= gameCount; i++) {
+                if (cancelled) {
+                    document.getElementById('progress').textContent = 'Simulation cancelled';
+                    break;
+                }
+
+                // Play one game
+                const result = await playOneGame(mctsSims);
+
+                // Update stats
+                stats.p1TotalScore += result.p1Score;
+                stats.p2TotalScore += result.p2Score;
+
+                if (result.p1Score > result.p2Score) {
+                    stats.p1Wins++;
+                } else if (result.p2Score > result.p1Score) {
+                    stats.p2Wins++;
+                } else {
+                    stats.draws++;
+                }
+
+                // Track P1's opening hex
+                if (result.openingHex !== undefined) {
+                    if (!stats.openingHexes[result.openingHex]) {
+                        stats.openingHexes[result.openingHex] = {
+                            count: 0,
+                            p1Wins: 0,
+                            p2Wins: 0
+                        };
+                    }
+                    stats.openingHexes[result.openingHex].count++;
+                    if (result.p1Score > result.p2Score) {
+                        stats.openingHexes[result.openingHex].p1Wins++;
+                    } else if (result.p2Score > result.p1Score) {
+                        stats.openingHexes[result.openingHex].p2Wins++;
+                    }
+                }
+
+                // Update display
+                updateDisplay(stats, i, gameCount, result);
+
+                // Yield to browser
+                if (i % 5 === 0) {
+                    await new Promise(resolve => setTimeout(resolve, 10));
+                }
+            }
+
+            // Final update
+            const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+            if (!cancelled) {
+                document.getElementById('progress').textContent =
+                    `✅ Completed ${gameCount} games in ${elapsed}s`;
+            }
+
+            // Re-enable controls
+            document.getElementById('runBtn').disabled = false;
+            document.getElementById('cancelBtn').style.display = 'none';
+        }
+
+        async function playOneGame(mctsSims) {
+            const game = new HexukiGameEngineFreeOpening();
+            const ai = new MCTSPlayer(mctsSims);
+
+            let openingHex = null;
+
+            while (!game.gameEnded) {
+                const validMoves = game.getAllValidMoves();
+                if (validMoves.length === 0) break;
+
+                const result = await ai.getBestMove(game);
+                game.makeMove(result.move.hexId, result.move.tileValue);
+
+                // Record P1's opening hex
+                if (game.moveCount === 1) {
+                    openingHex = result.move.hexId;
+                }
+            }
+
+            const scores = game.calculateScores();
+            return {
+                p1Score: scores.player1,
+                p2Score: scores.player2,
+                openingHex: openingHex
+            };
+        }
+
+        function updateDisplay(stats, currentGame, totalGames, lastResult) {
+            // Progress
+            const pct = ((currentGame / totalGames) * 100).toFixed(1);
+            document.getElementById('progress').innerHTML = `
+                Game ${currentGame} of ${totalGames} (${pct}%)<br>
+                Last: P1 ${lastResult.p1Score} vs P2 ${lastResult.p2Score}
+                ${lastResult.p1Score > lastResult.p2Score ? '(P1 wins)' :
+                  lastResult.p2Score > lastResult.p1Score ? '(P2 wins)' : '(Draw)'}
+            `;
+
+            // P1 stats
+            const p1WinPct = ((stats.p1Wins / currentGame) * 100).toFixed(1);
+            document.getElementById('p1Stats').innerHTML = `
+                Wins: ${stats.p1Wins} (${p1WinPct}%)<br>
+                Avg Score: ${(stats.p1TotalScore / currentGame).toFixed(1)}
+            `;
+
+            // P2 stats
+            const p2WinPct = ((stats.p2Wins / currentGame) * 100).toFixed(1);
+            document.getElementById('p2Stats').innerHTML = `
+                Wins: ${stats.p2Wins} (${p2WinPct}%)<br>
+                Avg Score: ${(stats.p2TotalScore / currentGame).toFixed(1)}
+            `;
+
+            // Analysis
+            let analysis = `<strong>Overall:</strong> P1 ${p1WinPct}% vs P2 ${p2WinPct}%<br><br>`;
+
+            // Opening hex analysis
+            const openingArray = Object.keys(stats.openingHexes)
+                .map(hexId => ({
+                    hexId: parseInt(hexId),
+                    ...stats.openingHexes[hexId],
+                    p1WinRate: (stats.openingHexes[hexId].p1Wins / stats.openingHexes[hexId].count) * 100
+                }))
+                .sort((a, b) => b.p1WinRate - a.p1WinRate);
+
+            if (openingArray.length > 0) {
+                analysis += '<strong>Best Opening Hexes for P1:</strong><br>';
+                openingArray.slice(0, 5).forEach(o => {
+                    analysis += `Hex ${o.hexId}: ${o.p1WinRate.toFixed(1)}% (${o.count} games)<br>`;
+                });
+            }
+
+            document.getElementById('analysis').innerHTML = analysis;
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Policy Analysis</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+        }
+        h1, h2 { color: #00ff00; }
+        .section {
+            background: #2a2a2a;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        pre {
+            background: #000;
+            padding: 15px;
+            overflow-x: auto;
+            color: #00ff00;
+        }
+        input[type="file"] {
+            background: #000;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        button {
+            background: #00ff00;
+            color: #1a1a1a;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        .good { color: #00ff00; }
+        .bad { color: #ff0000; }
+        .neutral { color: #ffff00; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        th, td {
+            border: 1px solid #00ff00;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background: #00ff00;
+            color: #1a1a1a;
+        }
+    </style>
+</head>
+<body>
+    <h1>Hexuki Policy Analyzer</h1>
+
+    <div class="section">
+        <h2>Load Policy</h2>
+        <input type="file" id="policyFile" accept=".json">
+        <button onclick="analyzePolicy()">Analyze Policy</button>
+    </div>
+
+    <div id="output"></div>
+
+    <script>
+        async function analyzePolicy() {
+            const file = document.getElementById('policyFile').files[0];
+            if (!file) {
+                alert('Please select a policy file');
+                return;
+            }
+
+            const text = await file.text();
+            const policy = JSON.parse(text);
+            const db = policy.database;
+
+            const output = document.getElementById('output');
+            output.innerHTML = '';
+
+            // Overall statistics
+            const section1 = document.createElement('div');
+            section1.className = 'section';
+            section1.innerHTML = `
+                <h2>Overall Statistics</h2>
+                <table>
+                    <tr><th>Metric</th><th>Value</th></tr>
+                    <tr><td>Policy Version</td><td>${policy.version}</td></tr>
+                    <tr><td>Total Games Played</td><td>${policy.totalGamesPlayed}</td></tr>
+                    <tr><td>Unique Positions</td><td>${Object.keys(db).length}</td></tr>
+                    <tr><td>Created</td><td>${new Date(policy.created).toLocaleString()}</td></tr>
+                    <tr><td>Last Updated</td><td>${new Date(policy.lastUpdated).toLocaleString()}</td></tr>
+                </table>
+            `;
+            output.appendChild(section1);
+
+            // Move statistics
+            let totalMoves = 0;
+            let totalGamesPlayed = 0;
+            let movesWithClearSignal = 0;
+            let underExploredMoves = 0;
+            let highConfidenceMoves = 0;
+            const winRateDistribution = [];
+
+            for (let posHash in db) {
+                for (let moveStr in db[posHash]) {
+                    const stats = db[posHash][moveStr];
+                    totalMoves++;
+                    totalGamesPlayed += stats.gamesPlayed;
+
+                    const winRate = stats.wins / stats.totalWeight;
+                    winRateDistribution.push(winRate);
+
+                    if (stats.gamesPlayed < 5) {
+                        underExploredMoves++;
+                    }
+
+                    if (stats.gamesPlayed >= 10) {
+                        if (winRate > 0.6 || winRate < 0.4) {
+                            highConfidenceMoves++;
+                        }
+                    }
+
+                    if (winRate > 0.6 || winRate < 0.4) {
+                        movesWithClearSignal++;
+                    }
+                }
+            }
+
+            const avgPlaysPerMove = totalGamesPlayed / totalMoves;
+            const clearSignalRatio = movesWithClearSignal / totalMoves;
+            const underExploredRatio = underExploredMoves / totalMoves;
+            const confidenceRatio = highConfidenceMoves / totalMoves;
+
+            const section2 = document.createElement('div');
+            section2.className = 'section';
+            section2.innerHTML = `
+                <h2>Learning Quality Metrics</h2>
+                <table>
+                    <tr><th>Metric</th><th>Value</th><th>Status</th></tr>
+                    <tr>
+                        <td>Total Unique Moves</td>
+                        <td>${totalMoves}</td>
+                        <td>-</td>
+                    </tr>
+                    <tr>
+                        <td>Average Plays per Move</td>
+                        <td>${avgPlaysPerMove.toFixed(2)}</td>
+                        <td class="${avgPlaysPerMove >= 5 ? 'good' : 'bad'}">${avgPlaysPerMove >= 5 ? '✓ Good' : '✗ Too Low'}</td>
+                    </tr>
+                    <tr>
+                        <td>Under-explored Moves (< 5 plays)</td>
+                        <td>${underExploredMoves} (${(underExploredRatio * 100).toFixed(1)}%)</td>
+                        <td class="${underExploredRatio < 0.5 ? 'good' : 'bad'}">${underExploredRatio < 0.5 ? '✓ Good' : '✗ Too High'}</td>
+                    </tr>
+                    <tr>
+                        <td>Moves with Clear Signal (>60% or <40% win rate)</td>
+                        <td>${movesWithClearSignal} (${(clearSignalRatio * 100).toFixed(1)}%)</td>
+                        <td class="${clearSignalRatio > 0.2 ? 'good' : 'neutral'}">${clearSignalRatio > 0.2 ? '✓ Good' : '~ Okay'}</td>
+                    </tr>
+                    <tr>
+                        <td>High Confidence Moves (≥10 plays + clear signal)</td>
+                        <td>${highConfidenceMoves} (${(confidenceRatio * 100).toFixed(1)}%)</td>
+                        <td class="${confidenceRatio > 0.1 ? 'good' : 'neutral'}">${confidenceRatio > 0.1 ? '✓ Good' : '~ Building'}</td>
+                    </tr>
+                </table>
+            `;
+            output.appendChild(section2);
+
+            // Best and worst moves
+            const allMoves = [];
+            for (let posHash in db) {
+                for (let moveStr in db[posHash]) {
+                    const stats = db[posHash][moveStr];
+                    allMoves.push({
+                        position: posHash.substring(0, 50) + '...',
+                        move: moveStr,
+                        winRate: stats.wins / stats.totalWeight,
+                        gamesPlayed: stats.gamesPlayed,
+                        wins: stats.wins,
+                        losses: stats.losses,
+                        ties: stats.ties
+                    });
+                }
+            }
+
+            // Sort by win rate
+            allMoves.sort((a, b) => b.winRate - a.winRate);
+            const bestMoves = allMoves.slice(0, 10);
+            const worstMoves = allMoves.slice(-10).reverse();
+
+            const section3 = document.createElement('div');
+            section3.className = 'section';
+            let html = `<h2>Top 10 Best Moves (Highest Win Rate)</h2><table>
+                <tr><th>Move</th><th>Win Rate</th><th>Games</th><th>W/L/T</th></tr>`;
+            for (let move of bestMoves) {
+                html += `<tr class="good">
+                    <td>${move.move}</td>
+                    <td>${(move.winRate * 100).toFixed(1)}%</td>
+                    <td>${move.gamesPlayed}</td>
+                    <td>${move.wins.toFixed(1)}/${move.losses.toFixed(1)}/${move.ties.toFixed(1)}</td>
+                </tr>`;
+            }
+            html += '</table>';
+            section3.innerHTML = html;
+            output.appendChild(section3);
+
+            const section4 = document.createElement('div');
+            section4.className = 'section';
+            html = `<h2>Top 10 Worst Moves (Lowest Win Rate)</h2><table>
+                <tr><th>Move</th><th>Win Rate</th><th>Games</th><th>W/L/T</th></tr>`;
+            for (let move of worstMoves) {
+                html += `<tr class="bad">
+                    <td>${move.move}</td>
+                    <td>${(move.winRate * 100).toFixed(1)}%</td>
+                    <td>${move.gamesPlayed}</td>
+                    <td>${move.wins.toFixed(1)}/${move.losses.toFixed(1)}/${move.ties.toFixed(1)}</td>
+                </tr>`;
+            }
+            html += '</table>';
+            section4.innerHTML = html;
+            output.appendChild(section4);
+
+            // Win rate distribution
+            const buckets = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0]; // 0-10%, 10-20%, ..., 90-100%
+            for (let wr of winRateDistribution) {
+                const bucket = Math.min(9, Math.floor(wr * 10));
+                buckets[bucket]++;
+            }
+
+            const section5 = document.createElement('div');
+            section5.className = 'section';
+            html = `<h2>Win Rate Distribution</h2><table>
+                <tr><th>Win Rate Range</th><th>Count</th><th>Percentage</th><th>Bar</th></tr>`;
+            for (let i = 0; i < 10; i++) {
+                const pct = (buckets[i] / totalMoves * 100).toFixed(1);
+                const barLength = Math.floor(buckets[i] / totalMoves * 50);
+                const bar = '█'.repeat(barLength);
+                html += `<tr>
+                    <td>${i * 10}-${(i + 1) * 10}%</td>
+                    <td>${buckets[i]}</td>
+                    <td>${pct}%</td>
+                    <td>${bar}</td>
+                </tr>`;
+            }
+            html += '</table>';
+            section5.innerHTML = html;
+            output.appendChild(section5);
+        }
+    </script>
+</body>
+</html>

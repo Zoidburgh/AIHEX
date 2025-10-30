@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Policy Evaluator - Test AI Strength</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+        }
+        h1 { color: #00ff00; }
+        h2 { color: #00cc00; font-size: 18px; margin-top: 30px; }
+        .controls {
+            background: #2a2a2a;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .control-group {
+            margin: 15px 0;
+        }
+        label {
+            display: inline-block;
+            width: 200px;
+            color: #00cc00;
+        }
+        input, select {
+            background: #000;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 5px 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+        #output {
+            background: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            height: 500px;
+            overflow-y: auto;
+            font-size: 12px;
+            white-space: pre-wrap;
+            margin-top: 20px;
+        }
+        button {
+            background: #00ff00;
+            color: #1a1a1a;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover { background: #00cc00; }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        .error { color: #ff0000; }
+        .success { color: #00ff00; }
+        .warn { color: #ff9900; }
+        .info { color: #00ccff; }
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+        .metric-box {
+            background: #000;
+            padding: 15px;
+            border-radius: 5px;
+            border: 2px solid #00ff00;
+            text-align: center;
+        }
+        .metric-label {
+            color: #00cc00;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        .metric-value {
+            color: #00ff00;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .result-section {
+            background: #2a2a2a;
+            border: 3px solid #00ff00;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            display: none;
+        }
+        .result-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .verdict {
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .verdict-excellent { background: #00ff00; color: #1a1a1a; }
+        .verdict-good { background: #00cc00; color: #1a1a1a; }
+        .verdict-decent { background: #ffff00; color: #1a1a1a; }
+        .verdict-poor { background: #ff9900; color: #1a1a1a; }
+        .verdict-terrible { background: #ff0000; color: #ffffff; }
+        progress {
+            width: 100%;
+            height: 30px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Policy Evaluator - Measure AI Strength</h1>
+
+    <div class="controls">
+        <h2>Evaluation Settings</h2>
+
+        <div class="control-group">
+            <label>Load Policy to Test:</label>
+            <input type="file" id="policyFile" accept=".json">
+        </div>
+
+        <div class="control-group">
+            <label>Test Mode:</label>
+            <select id="testMode">
+                <option value="policy-vs-random">Policy (P1) vs Random (P2)</option>
+                <option value="random-vs-policy">Random (P1) vs Policy (P2)</option>
+                <option value="both">Both (play from both sides)</option>
+                <option value="random-vs-random">🎲 Random (P1) vs Random (P2) - Baseline</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Number of Games:</label>
+            <select id="numGames">
+                <option value="50">50 games (quick)</option>
+                <option value="100" selected>100 games (standard)</option>
+                <option value="250">250 games (thorough)</option>
+                <option value="500">500 games (very thorough)</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Policy Exploration Rate:</label>
+            <input type="number" id="explorationRate" value="0.0" min="0" max="1" step="0.05">
+            <span style="color: #ffff00; margin-left: 10px;">0.0 = pure exploitation (best moves only)</span>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <button id="startBtn" onclick="startEvaluation()">Start Evaluation</button>
+            <button onclick="clearOutput()">Clear Output</button>
+        </div>
+
+        <div id="progressSection" style="display: none; margin-top: 20px;">
+            <label>Progress:</label>
+            <progress id="progressBar" value="0" max="100"></progress>
+            <div id="progressText" style="color: #00ff00; margin-top: 5px;">0 / 0 games</div>
+        </div>
+    </div>
+
+    <div id="resultsSection" class="result-section">
+        <div class="result-title">📊 EVALUATION RESULTS</div>
+
+        <div class="metrics">
+            <div class="metric-box">
+                <div class="metric-label">Games Played</div>
+                <div class="metric-value" id="metricTotal">-</div>
+            </div>
+            <div class="metric-box">
+                <div class="metric-label" id="metricPolicyLabel">Policy Wins</div>
+                <div class="metric-value" id="metricPolicyWins">-</div>
+            </div>
+            <div class="metric-box">
+                <div class="metric-label" id="metricRandomLabel">Random Wins</div>
+                <div class="metric-value" id="metricRandomWins">-</div>
+            </div>
+            <div class="metric-box">
+                <div class="metric-label" id="metricWinRateLabel">Win Rate</div>
+                <div class="metric-value" id="metricWinRate">-</div>
+            </div>
+        </div>
+
+        <div id="verdictBox" class="verdict"></div>
+
+        <div style="margin-top: 20px;">
+            <h2>Detailed Statistics</h2>
+            <div id="detailedStats"></div>
+        </div>
+    </div>
+
+    <div id="output"></div>
+
+    <script src="hexuki_game_engine_v2.js"></script>
+    <script src="hexuki_ai_trainer.js"></script>
+    <script>
+        const output = document.getElementById('output');
+        let policy = null;
+        let isEvaluating = false;
+
+        // Override console.log
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            const message = args.map(arg =>
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+
+            let className = '';
+            if (message.includes('❌') || message.includes('ERROR')) className = 'error';
+            else if (message.includes('✅') || message.includes('WIN')) className = 'success';
+            else if (message.includes('⚠️') || message.includes('WARN')) className = 'warn';
+            else if (message.includes('ℹ️') || message.includes('INFO')) className = 'info';
+
+            const line = document.createElement('div');
+            line.className = className;
+            line.textContent = message;
+            output.appendChild(line);
+            output.scrollTop = output.scrollHeight;
+        };
+
+        function clearOutput() {
+            output.innerHTML = '';
+        }
+
+        function updateProgress(current, total) {
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            progressBar.max = total;
+            progressBar.value = current;
+            progressText.textContent = `${current} / ${total} games`;
+        }
+
+        function showVerdict(winRate) {
+            const verdictBox = document.getElementById('verdictBox');
+            let className, message;
+
+            if (winRate >= 0.8) {
+                className = 'verdict-excellent';
+                message = '🏆 EXCELLENT! Your AI is a strong Hexuki player!';
+            } else if (winRate >= 0.65) {
+                className = 'verdict-good';
+                message = '✅ GOOD! Your AI has learned solid strategy!';
+            } else if (winRate >= 0.55) {
+                className = 'verdict-decent';
+                message = '👍 DECENT! Better than random, but needs more training.';
+            } else if (winRate >= 0.45) {
+                className = 'verdict-poor';
+                message = '😕 POOR! Barely better than random. More training needed.';
+            } else {
+                className = 'verdict-terrible';
+                message = '❌ TERRIBLE! Worse than random! Check your policy.';
+            }
+
+            verdictBox.className = `verdict ${className}`;
+            verdictBox.textContent = message;
+        }
+
+        async function startEvaluation() {
+            const testMode = document.getElementById('testMode').value;
+            const policyFile = document.getElementById('policyFile').files[0];
+
+            // Only require policy file if not running random-vs-random
+            if (testMode !== 'random-vs-random' && !policyFile) {
+                alert('Please select a policy file to evaluate');
+                return;
+            }
+
+            clearOutput();
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('progressSection').style.display = 'block';
+            document.getElementById('resultsSection').style.display = 'none';
+            isEvaluating = true;
+
+            try {
+                // Load policy (skip for random-vs-random)
+                if (testMode !== 'random-vs-random') {
+                    console.log('📂 Loading policy...');
+                    const text = await policyFile.text();
+                    const json = JSON.parse(text);
+                    policy = HexukiAI.PolicyDatabase.fromJSON(json);
+
+                    const summary = policy.getSummary();
+                    console.log(`✅ Loaded policy with ${summary.positionsExplored} positions, ${summary.totalGamesPlayed} training games\n`);
+                }
+
+                // Get settings
+                const numGames = parseInt(document.getElementById('numGames').value);
+                const explorationRate = parseFloat(document.getElementById('explorationRate').value);
+
+                console.log('═══════════════════════════════════════');
+                console.log('🎮 STARTING EVALUATION');
+                console.log('═══════════════════════════════════════');
+                console.log(`Mode: ${testMode}`);
+                console.log(`Games: ${numGames}`);
+                if (testMode !== 'random-vs-random') {
+                    console.log(`Exploration Rate: ${explorationRate}`);
+                }
+                console.log('');
+
+                const simulator = new HexukiAI.GameSimulator(new HexukiAI.AILogger(HexukiAI.LogLevel.ERROR));
+                const policyPlayer = new HexukiAI.PolicyPlayer();
+
+                let policyWins = 0;
+                let randomWins = 0;
+                let ties = 0;
+                let policyAsP1Wins = 0;
+                let policyAsP2Wins = 0;
+                let totalAsP1 = 0;
+                let totalAsP2 = 0;
+
+                const startTime = Date.now();
+
+                for (let i = 0; i < numGames; i++) {
+                    // Determine who plays as which player
+                    let policyIsP1;
+                    if (testMode === 'random-vs-random') {
+                        policyIsP1 = null; // No policy in this mode
+                    } else if (testMode === 'policy-vs-random') {
+                        policyIsP1 = true;
+                    } else if (testMode === 'random-vs-policy') {
+                        policyIsP1 = false;
+                    } else { // both
+                        policyIsP1 = i % 2 === 0;
+                    }
+
+                    // Play game
+                    const game = new HexukiGameEngineV2();
+                    let moveCount = 0;
+
+                    while (!game.gameEnded && moveCount < 18) {
+                        const validMoves = simulator.getAllValidMoves(game);
+                        if (validMoves.length === 0) break;
+
+                        let move;
+
+                        if (testMode === 'random-vs-random') {
+                            // Both players play randomly
+                            move = validMoves[Math.floor(Math.random() * validMoves.length)];
+                        } else {
+                            const currentPlayerIsPolicy = (policyIsP1 && game.currentPlayer === 1) ||
+                                                          (!policyIsP1 && game.currentPlayer === 2);
+
+                            if (currentPlayerIsPolicy) {
+                                // Policy player
+                                move = policyPlayer.selectMove(game, validMoves, policy, explorationRate);
+                            } else {
+                                // Random player
+                                move = validMoves[Math.floor(Math.random() * validMoves.length)];
+                            }
+                        }
+
+                        game.makeMove(move.hexId, move.tileValue);
+                        moveCount++;
+                    }
+
+                    // Determine winner
+                    const scores = game.calculateScores();
+                    const winner = scores.player1 > scores.player2 ? 1 :
+                                   scores.player2 > scores.player1 ? 2 : 0;
+
+                    // Track results
+                    if (testMode === 'random-vs-random') {
+                        // Track P1 vs P2 wins for random baseline
+                        if (winner === 0) {
+                            ties++;
+                        } else if (winner === 1) {
+                            policyWins++; // Reuse as "P1 wins"
+                            totalAsP1++;
+                        } else {
+                            randomWins++; // Reuse as "P2 wins"
+                            totalAsP2++;
+                        }
+                    } else {
+                        // Original logic for policy testing
+                        if (winner === 0) {
+                            ties++;
+                        } else if ((policyIsP1 && winner === 1) || (!policyIsP1 && winner === 2)) {
+                            policyWins++;
+                            if (policyIsP1) {
+                                policyAsP1Wins++;
+                                totalAsP1++;
+                            } else {
+                                policyAsP2Wins++;
+                                totalAsP2++;
+                            }
+                        } else {
+                            randomWins++;
+                            if (policyIsP1) {
+                                totalAsP1++;
+                            } else {
+                                totalAsP2++;
+                            }
+                        }
+                    }
+
+                    // Update progress
+                    updateProgress(i + 1, numGames);
+
+                    // Periodic logging
+                    if ((i + 1) % 50 === 0) {
+                        const elapsed = (Date.now() - startTime) / 1000;
+                        console.log(`Progress: ${i + 1}/${numGames} (${((i+1)/elapsed).toFixed(1)} games/sec)`);
+                    }
+
+                    // Yield to browser
+                    if (i % 10 === 0) {
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                }
+
+                const elapsed = (Date.now() - startTime) / 1000;
+                const winRate = policyWins / numGames;
+
+                // Display results
+                console.log('\n═══════════════════════════════════════');
+                console.log('📊 EVALUATION COMPLETE');
+                console.log('═══════════════════════════════════════');
+                console.log(`Total Games: ${numGames}`);
+
+                if (testMode === 'random-vs-random') {
+                    console.log(`Player 1 Wins: ${policyWins} (${(winRate * 100).toFixed(1)}%)`);
+                    console.log(`Player 2 Wins: ${randomWins} (${(randomWins / numGames * 100).toFixed(1)}%)`);
+                    console.log(`Ties: ${ties}`);
+                    console.log(`Time: ${elapsed.toFixed(2)}s (${(numGames / elapsed).toFixed(1)} games/sec)`);
+
+                    console.log('\n🎲 BASELINE RESULTS (Random vs Random):');
+                    console.log(`Player 1 (first move) wins: ${(winRate * 100).toFixed(1)}%`);
+                    console.log(`Player 2 (second move) wins: ${(randomWins / numGames * 100).toFixed(1)}%`);
+
+                    if (winRate < 0.3) {
+                        console.log('\n⚠️  ANALYSIS: Player 2 has a SIGNIFICANT advantage (~70-80% win rate)');
+                        console.log('   This explains why opening book policies show low P1 win rates!');
+                    } else if (winRate > 0.7) {
+                        console.log('\n⚠️  ANALYSIS: Player 1 has a SIGNIFICANT advantage (~70-80% win rate)');
+                    } else {
+                        console.log('\n✅ ANALYSIS: Game is relatively balanced (both players ~40-60% win rate)');
+                    }
+                } else {
+                    console.log(`Policy Wins: ${policyWins} (${(winRate * 100).toFixed(1)}%)`);
+                    console.log(`Random Wins: ${randomWins} (${(randomWins / numGames * 100).toFixed(1)}%)`);
+                    console.log(`Ties: ${ties}`);
+                    console.log(`Time: ${elapsed.toFixed(2)}s (${(numGames / elapsed).toFixed(1)} games/sec)`);
+
+                    if (testMode === 'both') {
+                        console.log('\nBy Position:');
+                        console.log(`  As Player 1: ${policyAsP1Wins}/${totalAsP1} (${(policyAsP1Wins/totalAsP1*100).toFixed(1)}%)`);
+                        console.log(`  As Player 2: ${policyAsP2Wins}/${totalAsP2} (${(policyAsP2Wins/totalAsP2*100).toFixed(1)}%)`);
+                    }
+                }
+
+                // Show results section first so elements are in DOM
+                document.getElementById('resultsSection').style.display = 'block';
+
+                // Update metrics display
+                document.getElementById('metricTotal').textContent = numGames;
+
+                if (testMode === 'random-vs-random') {
+                    // Change labels for baseline test
+                    document.getElementById('metricPolicyLabel').textContent = 'Player 1 Wins';
+                    document.getElementById('metricRandomLabel').textContent = 'Player 2 Wins';
+                    document.getElementById('metricWinRateLabel').textContent = 'P1 Win Rate';
+                    document.getElementById('metricPolicyWins').textContent = policyWins;
+                    document.getElementById('metricRandomWins').textContent = randomWins;
+                    document.getElementById('metricWinRate').textContent = (winRate * 100).toFixed(1) + '%';
+
+                    // Custom verdict for baseline
+                    const verdictBox = document.getElementById('verdictBox');
+                    if (winRate < 0.3) {
+                        verdictBox.className = 'verdict verdict-terrible';
+                        verdictBox.textContent = '⚠️ CONFIRMED: Player 2 has ~70-80% advantage! This explains low P1 policy win rates.';
+                    } else if (winRate > 0.7) {
+                        verdictBox.className = 'verdict verdict-excellent';
+                        verdictBox.textContent = '⚠️ Player 1 has ~70-80% advantage! Unexpected result.';
+                    } else {
+                        verdictBox.className = 'verdict verdict-decent';
+                        verdictBox.textContent = '✅ Game is relatively balanced. Player position matters less.';
+                    }
+                } else {
+                    // Reset labels for policy testing
+                    document.getElementById('metricPolicyLabel').textContent = 'Policy Wins';
+                    document.getElementById('metricRandomLabel').textContent = 'Random Wins';
+                    document.getElementById('metricWinRateLabel').textContent = 'Win Rate';
+                    document.getElementById('metricPolicyWins').textContent = policyWins;
+                    document.getElementById('metricRandomWins').textContent = randomWins;
+                    document.getElementById('metricWinRate').textContent = (winRate * 100).toFixed(1) + '%';
+
+                    // Show verdict
+                    showVerdict(winRate);
+                }
+
+                // Detailed stats
+                let detailedHTML = '<pre>';
+
+                if (testMode === 'random-vs-random') {
+                    detailedHTML += `Player 1 Win Rate: ${(winRate * 100).toFixed(2)}%\n`;
+                    detailedHTML += `Player 2 Win Rate: ${(randomWins / numGames * 100).toFixed(2)}%\n`;
+                    detailedHTML += `Tie Rate: ${(ties / numGames * 100).toFixed(2)}%\n`;
+                    detailedHTML += `\nTime per game: ${(elapsed / numGames * 1000).toFixed(2)}ms\n`;
+                    detailedHTML += `Games per second: ${(numGames / elapsed).toFixed(1)}\n`;
+
+                    const p2Advantage = (randomWins / numGames) - winRate;
+                    detailedHTML += `\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`;
+                    detailedHTML += `BASELINE ANALYSIS:\n`;
+                    detailedHTML += `Second-player advantage: ${(p2Advantage * 100).toFixed(1)}%\n`;
+
+                    if (Math.abs(p2Advantage) > 0.2) {
+                        detailedHTML += `\n⚠️  This is a SIGNIFICANT imbalance!\n`;
+                        detailedHTML += `   Policies trained as P1 will naturally\n`;
+                        detailedHTML += `   show low win rates (~${(winRate * 100).toFixed(0)}%) even when\n`;
+                        detailedHTML += `   playing optimally.\n`;
+                    }
+                } else {
+                    detailedHTML += `Win Rate: ${(winRate * 100).toFixed(2)}%\n`;
+                    detailedHTML += `Loss Rate: ${(randomWins / numGames * 100).toFixed(2)}%\n`;
+                    detailedHTML += `Tie Rate: ${(ties / numGames * 100).toFixed(2)}%\n`;
+                    detailedHTML += `\nTime per game: ${(elapsed / numGames * 1000).toFixed(2)}ms\n`;
+                    detailedHTML += `Games per second: ${(numGames / elapsed).toFixed(1)}\n`;
+
+                    if (testMode === 'both') {
+                        detailedHTML += `\nAs Player 1: ${policyAsP1Wins}/${totalAsP1} wins (${(policyAsP1Wins/totalAsP1*100).toFixed(1)}%)\n`;
+                        detailedHTML += `As Player 2: ${policyAsP2Wins}/${totalAsP2} wins (${(policyAsP2Wins/totalAsP2*100).toFixed(1)}%)\n`;
+
+                        const advantage = (policyAsP1Wins/totalAsP1) - (policyAsP2Wins/totalAsP2);
+                        detailedHTML += `\nFirst-player advantage: ${(advantage * 100).toFixed(1)}%`;
+                    }
+                }
+
+                detailedHTML += '</pre>';
+                document.getElementById('detailedStats').innerHTML = detailedHTML;
+
+                console.log('\n✅ Evaluation complete!');
+
+            } catch (error) {
+                console.log('❌ ERROR:', error.message);
+                console.log(error.stack);
+            }
+
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('progressSection').style.display = 'none';
+            isEvaluating = false;
+        }
+
+        console.log('Ready! Load a policy file (or select Random vs Random baseline) and click "Start Evaluation".\n');
+    </script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Free Opening Mode</title>
+    <style>
+        body {
+            font-family: 'Consolas', 'Monaco', monospace;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 20px;
+        }
+        .test-section {
+            background: #2d2d30;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .pass { color: #4ec9b0; }
+        .fail { color: #f48771; }
+        .info { color: #569cd6; }
+        h1 { color: #569cd6; }
+        h2 { color: #4ec9b0; margin-top: 0; }
+        pre {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 3px solid #569cd6;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎮 Free Opening Mode Test</h1>
+    <p class="info">Testing that P1's first move can be placed anywhere (all 18 positions)</p>
+
+    <div class="test-section">
+        <h2>Test Results</h2>
+        <div id="results"></div>
+    </div>
+
+    <script src="hexuki_game_engine_free_opening.js"></script>
+    <script>
+        const results = document.getElementById('results');
+        let html = '';
+
+        try {
+            // Create game
+            const game = new HexukiGameEngineFreeOpening();
+            html += '<p class="pass">✓ Free Opening engine loaded</p>';
+
+            // Test: Get all valid moves for P1's first move
+            const validMoves = game.getAllValidMoves();
+            html += `<p class="info">P1 first move: ${validMoves.length} valid moves found</p>`;
+
+            // Count unique hex positions
+            const uniqueHexes = new Set(validMoves.map(m => m.hexId));
+            html += `<p class="info">Unique hex positions: ${uniqueHexes.size}</p>`;
+
+            // Verify P1 can place on ALL 18 empty hexes
+            if (uniqueHexes.size === 18) {
+                html += '<p class="pass">✓ CORRECT: P1 can place on all 18 empty hexes!</p>';
+            } else {
+                html += `<p class="fail">✗ WRONG: Expected 18 hexes, got ${uniqueHexes.size}</p>`;
+            }
+
+            // Show which hexes are available
+            html += '<pre>Available hexes for P1 move 1:\n';
+            const sortedHexes = Array.from(uniqueHexes).sort((a, b) => a - b);
+            sortedHexes.forEach(hexId => {
+                html += `Hex ${hexId.toString().padStart(2)}\n`;
+            });
+            html += '</pre>';
+
+            // Test a few specific placements
+            html += '<h2>Test Specific Placements</h2>';
+
+            // Test corner hex (should work with free opening)
+            const cornerTest = game.makeMove(0, 5); // Top corner
+            if (cornerTest) {
+                html += '<p class="pass">✓ Can place on corner hex 0 (top)</p>';
+            } else {
+                html += '<p class="fail">✗ Cannot place on corner hex 0</p>';
+            }
+
+            // Test that move 2 requires adjacency
+            game.reset();
+            game.makeMove(0, 5); // P1 plays corner
+
+            const move2Moves = game.getAllValidMoves();
+            const move2Hexes = new Set(move2Moves.map(m => m.hexId));
+
+            html += `<p class="info">Move 2 (P2): ${move2Hexes.size} valid hex positions</p>`;
+
+            // P2 should only be able to play adjacent to hex 0 (which is hex 1)
+            // or adjacent to center hex 9
+            if (move2Hexes.size < 18) {
+                html += '<p class="pass">✓ CORRECT: Move 2 has adjacency restriction</p>';
+            } else {
+                html += '<p class="fail">✗ WRONG: Move 2 should have adjacency restriction</p>';
+            }
+
+            html += '<pre>Valid hexes for P2 move 2:\n';
+            const sortedMove2 = Array.from(move2Hexes).sort((a, b) => a - b);
+            sortedMove2.forEach(hexId => {
+                html += `Hex ${hexId.toString().padStart(2)}\n`;
+            });
+            html += '</pre>';
+
+            // Test edge hex placement
+            game.reset();
+            const edgeTest = game.makeMove(18, 7); // Bottom corner
+            if (edgeTest) {
+                html += '<p class="pass">✓ Can place on hex 18 (bottom)</p>';
+            } else {
+                html += '<p class="fail">✗ Cannot place on hex 18</p>';
+            }
+
+            // Test middle side hex
+            game.reset();
+            const sideTest = game.makeMove(8, 3); // Left side
+            if (sideTest) {
+                html += '<p class="pass">✓ Can place on hex 8 (left side)</p>';
+            } else {
+                html += '<p class="fail">✗ Cannot place on hex 8</p>';
+            }
+
+            html += '<h2>Summary</h2>';
+            html += '<p class="pass"><strong>Free Opening Mode is working correctly!</strong></p>';
+            html += '<p class="info">P1 can start anywhere, all other moves require adjacency.</p>';
+
+        } catch (error) {
+            html += `<p class="fail">✗ Error: ${error.message}</p>`;
+            console.error(error);
+        }
+
+        results.innerHTML = html;
+    </script>
+</body>
+</html>

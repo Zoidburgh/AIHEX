@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Minimax Performance Benchmark</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        h1 { color: #4ec9b0; }
+        .container {
+            background: #252526;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 5px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button:hover { background: #1177bb; }
+        .results {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .result-box {
+            background: #2d2d30;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .result-box h3 {
+            margin-top: 0;
+            color: #569cd6;
+        }
+        .metric {
+            margin: 8px 0;
+            font-size: 14px;
+        }
+        .metric-label {
+            color: #858585;
+            display: inline-block;
+            width: 150px;
+        }
+        .metric-value {
+            color: #4ec9b0;
+            font-weight: bold;
+        }
+        .faster {
+            color: #27ae60;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        pre {
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏎️ Minimax Performance Benchmark</h1>
+
+    <div class="container">
+        <h2>Run Benchmark</h2>
+        <button onclick="runBenchmark(4)">4 Empty Hexes</button>
+        <button onclick="runBenchmark(5)">5 Empty Hexes</button>
+        <button onclick="runBenchmark(6)">6 Empty Hexes</button>
+        <button onclick="runBenchmark(7)">7 Empty Hexes</button>
+        <button onclick="runBenchmark(8)">8 Empty Hexes (slow)</button>
+    </div>
+
+    <div class="container" id="resultsContainer" style="display:none;">
+        <h2>Benchmark Results</h2>
+        <div class="results">
+            <div class="result-box">
+                <h3>Original Minimax</h3>
+                <div id="originalResults"></div>
+            </div>
+            <div class="result-box">
+                <h3>Optimized Minimax</h3>
+                <div id="optimizedResults"></div>
+            </div>
+        </div>
+        <div style="margin-top: 20px; text-align: center;">
+            <div class="faster" id="speedup"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Console Output</h2>
+        <pre id="console"></pre>
+    </div>
+
+    <script src="hexuki_game_engine_v2.js"></script>
+    <script src="minimax_endgame.js"></script>
+    <script src="minimax_endgame_optimized.js"></script>
+    <script>
+        function log(msg) {
+            const consoleEl = document.getElementById('console');
+            consoleEl.textContent += msg + '\n';
+            console.log(msg);
+        }
+
+        function createTestPosition(emptyHexes) {
+            const game = new HexukiGameEngineV2();
+
+            // Fill board randomly until we have the desired number of empty hexes
+            const totalHexes = 19;
+            const movesToMake = totalHexes - emptyHexes;
+
+            let movesMade = 0;
+            while (movesMade < movesToMake) {
+                const validMoves = game.getAllValidMoves();
+                if (validMoves.length === 0) break;
+
+                // Make random move
+                const randomMove = validMoves[Math.floor(Math.random() * validMoves.length)];
+                game.makeMove(randomMove.hexId, randomMove.tileValue);
+                movesMade++;
+            }
+
+            return game;
+        }
+
+        async function runBenchmark(emptyHexes) {
+            document.getElementById('resultsContainer').style.display = 'none';
+            document.getElementById('console').textContent = '';
+
+            log(`Creating test position with ${emptyHexes} empty hexes...`);
+            const game = createTestPosition(emptyHexes);
+
+            log(`Position created. Current player: ${game.currentPlayer}`);
+            log(`Valid moves: ${game.getAllValidMoves().length}`);
+            log('');
+
+            // Benchmark original
+            log('=== ORIGINAL MINIMAX ===');
+            const originalSolver = new MinimaxEndgameSolver(game);
+            const originalStart = performance.now();
+            const originalResult = originalSolver.findBestMove(true);
+            const originalEnd = performance.now();
+            const originalTime = originalEnd - originalStart;
+
+            log('');
+
+            // Benchmark optimized
+            log('=== OPTIMIZED MINIMAX ===');
+            const optimizedSolver = new MinimaxEndgameSolverOptimized(game);
+            const optimizedStart = performance.now();
+            const optimizedResult = optimizedSolver.findBestMove(true);
+            const optimizedEnd = performance.now();
+            const optimizedTime = optimizedEnd - optimizedStart;
+
+            // Display results
+            document.getElementById('originalResults').innerHTML = `
+                <div class="metric">
+                    <span class="metric-label">Time:</span>
+                    <span class="metric-value">${originalTime.toFixed(1)} ms</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Nodes Searched:</span>
+                    <span class="metric-value">${originalSolver.nodesSearched.toLocaleString()}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Cache Hits:</span>
+                    <span class="metric-value">${originalSolver.cacheHits.toLocaleString()}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Hit Rate:</span>
+                    <span class="metric-value">${(originalSolver.cacheHits / originalSolver.nodesSearched * 100).toFixed(1)}%</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Best Move:</span>
+                    <span class="metric-value">t${originalResult.tile}h${originalResult.hexId}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Score:</span>
+                    <span class="metric-value">${originalResult.score}</span>
+                </div>
+            `;
+
+            document.getElementById('optimizedResults').innerHTML = `
+                <div class="metric">
+                    <span class="metric-label">Time:</span>
+                    <span class="metric-value">${optimizedTime.toFixed(1)} ms</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Nodes Searched:</span>
+                    <span class="metric-value">${optimizedSolver.nodesSearched.toLocaleString()}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Cache Hits:</span>
+                    <span class="metric-value">${optimizedSolver.cacheHits.toLocaleString()}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Hit Rate:</span>
+                    <span class="metric-value">${(optimizedSolver.cacheHits / optimizedSolver.nodesSearched * 100).toFixed(1)}%</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Best Move:</span>
+                    <span class="metric-value">t${optimizedResult.tile}h${optimizedResult.hexId}</span>
+                </div>
+                <div class="metric">
+                    <span class="metric-label">Score:</span>
+                    <span class="metric-value">${optimizedResult.score}</span>
+                </div>
+            `;
+
+            const speedup = originalTime / optimizedTime;
+            const savedTime = originalTime - optimizedTime;
+
+            document.getElementById('speedup').textContent =
+                `🚀 ${speedup.toFixed(1)}x FASTER! Saved ${savedTime.toFixed(0)}ms`;
+
+            document.getElementById('resultsContainer').style.display = 'block';
+
+            // Verify same move
+            if (originalResult.tile === optimizedResult.tile &&
+                originalResult.hexId === optimizedResult.hexId) {
+                log('');
+                log('✅ VERIFICATION: Both solvers found the same best move!');
+            } else {
+                log('');
+                log('⚠️ WARNING: Different moves found!');
+                log(`Original: t${originalResult.tile}h${originalResult.hexId}`);
+                log(`Optimized: t${optimizedResult.tile}h${optimizedResult.hexId}`);
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hexuki AI Training Workflow Guide</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1 { color: #00ff00; text-align: center; }
+        h2 { color: #00ff00; margin-top: 30px; }
+        .workflow {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin: 30px 0;
+        }
+        .step {
+            background: #2a2a2a;
+            border: 3px solid #00ff00;
+            border-radius: 10px;
+            padding: 20px;
+            position: relative;
+        }
+        .step-number {
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background: #00ff00;
+            color: #1a1a1a;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .step-title {
+            color: #00ff00;
+            font-size: 20px;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .step-action {
+            background: #000;
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 3px solid #00ff00;
+            padding-left: 15px;
+        }
+        .step-why {
+            color: #ffff00;
+            margin: 10px 0;
+            font-style: italic;
+        }
+        .step-output {
+            background: #1a1a2e;
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 3px solid #ffff00;
+            padding-left: 15px;
+            color: #ffff00;
+        }
+        .arrow {
+            text-align: center;
+            font-size: 30px;
+            color: #00ff00;
+        }
+        .cycle {
+            background: #2a2a2a;
+            border: 3px dashed #ffff00;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .cycle-title {
+            color: #ffff00;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .important {
+            background: #ff0000;
+            color: #ffffff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .good {
+            background: #00ff00;
+            color: #1a1a1a;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .faq {
+            background: #2a2a2a;
+            border: 2px solid #00ccff;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .faq-q {
+            color: #00ccff;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .faq-a {
+            color: #ffffff;
+            margin-left: 20px;
+        }
+        code {
+            background: #000;
+            color: #00ff00;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎓 Hexuki AI Training Workflow</h1>
+    <p style="text-align: center; color: #00ccff; font-size: 18px;">
+        Complete guide to training, evaluating, and evolving your AI
+    </p>
+
+    <div class="important">
+        ⚠️ KEY CONCEPT: Policy evolution happens during TRAINING, not evaluation!
+    </div>
+
+    <h2>📋 Complete Workflow (Start to Expert AI)</h2>
+
+    <div class="workflow">
+        <!-- Step 1 -->
+        <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-title">🚀 Initial Training (Generation 1)</div>
+            <div class="step-action">
+                <strong>Tool:</strong> run_phase2.html<br>
+                <strong>Action:</strong> Select "Extended (1000 games, 5 gens)" or "Custom"<br>
+                <strong>Settings:</strong> Don't import any policy (start fresh)<br>
+                <strong>Click:</strong> "Start Training"
+            </div>
+            <div class="step-why">
+                <strong>Why:</strong> Creates your first policy from scratch through self-play
+            </div>
+            <div class="step-output">
+                <strong>Output:</strong> hexuki_policy_phase2_gen5_[timestamp].json<br>
+                <strong>What it contains:</strong> Win/loss statistics for ~1000-5000 positions
+            </div>
+        </div>
+
+        <div class="arrow">⬇️</div>
+
+        <!-- Step 2 -->
+        <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-title">📊 Analyze Learning Quality</div>
+            <div class="step-action">
+                <strong>Tool:</strong> analyze_policy.html<br>
+                <strong>Action:</strong> Load your policy.json<br>
+                <strong>Look for:</strong>
+                <ul>
+                    <li>Clear Signal Ratio > 20% (moves with obvious good/bad patterns)</li>
+                    <li>Under-explored Ratio < 50% (most moves tried enough times)</li>
+                    <li>Win Rate Distribution (should see peaks at 0-10% and 90-100%)</li>
+                </ul>
+            </div>
+            <div class="step-why">
+                <strong>Why:</strong> Confirms real learning happened (not just random noise)
+            </div>
+            <div class="step-output">
+                <strong>Output:</strong> Metrics showing learning quality<br>
+                <strong>Decision:</strong> If metrics look good → proceed. If bad → retrain with different settings
+            </div>
+        </div>
+
+        <div class="arrow">⬇️</div>
+
+        <!-- Step 3 -->
+        <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-title">⚔️ Evaluate Strength (Policy vs Random)</div>
+            <div class="step-action">
+                <strong>Tool:</strong> evaluate_policy.html (I'll create this)<br>
+                <strong>Action:</strong> Load your policy.json<br>
+                <strong>Test:</strong> Play 100-500 games: Your Policy vs Pure Random<br>
+                <strong>Measure:</strong> Win rate %
+            </div>
+            <div class="step-why">
+                <strong>Why:</strong> Proves your AI is actually better than random play
+            </div>
+            <div class="step-output">
+                <strong>Expected:</strong> 60-80% win rate after 5K training games<br>
+                <strong>If lower:</strong> Policy needs more training or has issues
+            </div>
+        </div>
+
+        <div class="arrow">⬇️</div>
+
+        <!-- Step 4 -->
+        <div class="step">
+            <div class="step-number">4</div>
+            <div class="step-title">🔄 Continue Training (Evolution!)</div>
+            <div class="step-action">
+                <strong>Tool:</strong> run_phase2.html<br>
+                <strong>Action:</strong> Click "Import Existing Policy" → select your policy.json<br>
+                <strong>Settings:</strong> Run another 5 generations (5K more games)<br>
+                <strong>Click:</strong> "Start Training"
+            </div>
+            <div class="step-why">
+                <strong>Why:</strong> Policy continues learning from where it left off!<br>
+                <strong>This is evolution:</strong> It plays against itself, discovers new strategies, refines old ones
+            </div>
+            <div class="step-output">
+                <strong>Output:</strong> hexuki_policy_phase2_gen10_[timestamp].json<br>
+                <strong>Difference:</strong> Now has 10K games worth of knowledge, better strategies
+            </div>
+        </div>
+
+        <div class="arrow">⬇️</div>
+
+        <!-- Step 5 -->
+        <div class="step">
+            <div class="step-number">5</div>
+            <div class="step-title">📈 Compare Generations (Tournament)</div>
+            <div class="step-action">
+                <strong>Tool:</strong> tournament.html (I'll create this)<br>
+                <strong>Action:</strong> Load gen5 policy vs gen10 policy<br>
+                <strong>Test:</strong> Play them against each other (100 games)<br>
+                <strong>Measure:</strong> Which one wins more?
+            </div>
+            <div class="step-why">
+                <strong>Why:</strong> Proves learning improved over time
+            </div>
+            <div class="step-output">
+                <strong>Expected:</strong> Gen10 should beat Gen5 (60%+ win rate)<br>
+                <strong>Validates:</strong> Evolution is working!
+            </div>
+        </div>
+    </div>
+
+    <div class="cycle">
+        <div class="cycle-title">🔁 REPEAT STEPS 4-5 FOREVER</div>
+        <p style="margin-top: 15px;">
+            Each cycle: Import latest policy → Train 5K more → Evaluate → Compare → Repeat<br>
+            The AI keeps getting stronger with each generation!
+        </p>
+    </div>
+
+    <div class="good">
+        ✅ GOAL: After 50K-100K games, your AI should be VERY strong and play strategic Hexuki!
+    </div>
+
+    <h2>❓ Frequently Asked Questions</h2>
+
+    <div class="faq">
+        <div class="faq-q">Q: Does the policy learn during evaluation?</div>
+        <div class="faq-a">
+            <strong>NO!</strong> Evaluation is read-only testing. The policy only learns during training in run_phase2.html.
+            Think of it like: Training = studying, Evaluation = taking a test.
+        </div>
+    </div>
+
+    <div class="faq">
+        <div class="faq-q">Q: How does "evolution" work?</div>
+        <div class="faq-a">
+            When you import a policy and train more, it plays against itself using its current knowledge.
+            As it plays, it discovers which moves lead to wins against SMART opponents (itself), not just random.
+            Over time, it learns deeper strategies like "tile 7 is bad on hex 4 in the opening, but great on hex 11 mid-game."
+        </div>
+    </div>
+
+    <div class="faq">
+        <div class="faq-q">Q: How many times can I re-train the same policy?</div>
+        <div class="faq-a">
+            Unlimited! Just keep importing the latest policy.json and running more generations.
+            Each time it gets smarter. Some AIs are trained for millions of games.
+        </div>
+    </div>
+
+    <div class="faq">
+        <div class="faq-q">Q: What if my policy stops improving?</div>
+        <div class="faq-a">
+            This is called "convergence" - it's learned as much as it can with current method.
+            Solutions: 1) Increase exploration rate to try new things, 2) Add opponent diversity,
+            3) Train against other strong policies, or 4) You've created a master AI!
+        </div>
+    </div>
+
+    <div class="faq">
+        <div class="faq-q">Q: Should I save every generation's policy?</div>
+        <div class="faq-a">
+            <strong>YES!</strong> Save policies every 5-10 generations. This lets you:
+            1) Compare improvement over time, 2) Roll back if training goes wrong,
+            3) Create tournaments, 4) Share different strength AIs with others.
+        </div>
+    </div>
+
+    <div class="faq">
+        <div class="faq-q">Q: What's a realistic timeline to a strong AI?</div>
+        <div class="faq-a">
+            • 5K games: Beats random (60-70%)<br>
+            • 20K games: Decent strategy, understands openings<br>
+            • 50K games: Strong player, good tactics<br>
+            • 100K+ games: Expert level, near-optimal play
+        </div>
+    </div>
+
+    <div class="faq">
+        <div class="faq-q">Q: Can I train overnight?</div>
+        <div class="faq-a">
+            Yes! Set "Custom" mode with many generations. At ~200 games/sec, you can do
+            50K games in ~4 minutes. Overnight could be 500K+ games!
+        </div>
+    </div>
+
+    <h2>🛠️ Tools Summary</h2>
+
+    <div class="step">
+        <div class="step-title">Existing Tools</div>
+        <ul>
+            <li><code>run_phase1.html</code> - Sanity testing (verify engine works)</li>
+            <li><code>run_phase2.html</code> - TRAINING (where evolution happens)</li>
+            <li><code>analyze_policy.html</code> - Check learning quality metrics</li>
+        </ul>
+    </div>
+
+    <div class="step">
+        <div class="step-title">Tools I'll Create Next</div>
+        <ul>
+            <li><code>evaluate_policy.html</code> - Policy vs Random testing</li>
+            <li><code>tournament.html</code> - Compare two policies head-to-head</li>
+            <li><code>strategy_viewer.html</code> - Visualize what AI learned</li>
+        </ul>
+    </div>
+
+    <h2>🎯 Your Next Steps</h2>
+    <ol style="font-size: 18px; line-height: 2;">
+        <li>Run 5K games in run_phase2.html (Extended mode)</li>
+        <li>Export the policy.json</li>
+        <li>Analyze it with analyze_policy.html</li>
+        <li><strong>Wait for me to create evaluate_policy.html</strong></li>
+        <li>Test your policy against random</li>
+        <li>Import policy back into run_phase2.html and train another 5K</li>
+        <li>Repeat until you have a Hexuki master!</li>
+    </ol>
+
+</body>
+</html>

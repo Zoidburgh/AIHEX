@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MCTS Deep Debug</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            margin: 5px;
+        }
+
+        pre {
+            background: #0a0a0a;
+            padding: 15px;
+            border: 2px solid #00ff00;
+            border-radius: 4px;
+            overflow-x: auto;
+            color: #00ff00;
+            max-height: 600px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .error { color: #ff0000; font-weight: bold; }
+        .warn { color: #ffff00; }
+        .good { color: #00ff00; }
+    </style>
+</head>
+<body>
+    <h1>🔍 MCTS Deep Debug</h1>
+
+    <button onclick="debugFirstMove()">Debug First Move (100 sims)</button>
+    <button onclick="debugBackpropagation()">Debug Backpropagation Logic</button>
+
+    <pre id="output"></pre>
+
+    <script src="hexuki_game_engine_v2.js"></script>
+    <script src="mcts_ai_player.js"></script>
+    <script>
+        function debugFirstMove() {
+            const output = document.getElementById('output');
+            output.textContent = '=== DEBUGGING FIRST MOVE ===\n\n';
+
+            const game = new HexukiGameEngineV2();
+            output.textContent += `Initial state: Player ${game.currentPlayer} to move\n\n`;
+
+            // Manually create root node
+            const root = new MCTSNode(game);
+            output.textContent += `Root node created:\n`;
+            output.textContent += `  playerJustMoved: ${root.playerJustMoved}\n`;
+            output.textContent += `  currentPlayer in game: ${root.game.currentPlayer}\n`;
+            output.textContent += `  untried moves: ${root.untriedMoves.length}\n\n`;
+
+            // Run a few MCTS iterations manually
+            output.textContent += `=== Running 5 MCTS iterations manually ===\n\n`;
+
+            for (let i = 0; i < 5; i++) {
+                output.textContent += `--- Iteration ${i + 1} ---\n`;
+
+                // Selection (root has no children yet, so skip)
+                let node = root;
+
+                // Expansion
+                if (node.untriedMoves.length > 0) {
+                    const move = node.untriedMoves[0]; // Take first move
+                    output.textContent += `Expanding: Hex ${move.hexId}, Tile ${move.tileValue}\n`;
+
+                    node = node.addChild(move);
+                    output.textContent += `  Child created - playerJustMoved: ${node.playerJustMoved}\n`;
+                    output.textContent += `  Child game currentPlayer: ${node.game.currentPlayer}\n`;
+                }
+
+                // Simulation
+                output.textContent += `Simulating from this position...\n`;
+                const result = node.simulate();
+                output.textContent += `  Simulation result: ${result}\n`;
+                output.textContent += `  (1.0 = win for player ${node.game.currentPlayer}, 0.0 = loss)\n`;
+
+                // Backpropagation
+                output.textContent += `Backpropagating...\n`;
+                const beforeWins = node.wins;
+                const beforeVisits = node.visits;
+                node.update(result);
+                output.textContent += `  Node: visits ${beforeVisits} → ${node.visits}, wins ${beforeWins} → ${node.wins.toFixed(2)}\n`;
+
+                if (node.parent) {
+                    output.textContent += `  Parent: visits ${node.parent.visits}, wins ${node.parent.wins.toFixed(2)}\n`;
+                }
+
+                output.textContent += `\n`;
+            }
+
+            // Check root node final state
+            output.textContent += `\n=== ROOT NODE FINAL STATE ===\n`;
+            output.textContent += `Visits: ${root.visits}\n`;
+            output.textContent += `Wins: ${root.wins.toFixed(2)}\n`;
+            output.textContent += `Children: ${root.children.length}\n\n`;
+
+            root.children.forEach((child, idx) => {
+                const winRate = child.visits > 0 ? (child.wins / child.visits * 100).toFixed(1) : 'N/A';
+                output.textContent += `Child ${idx + 1}: Hex ${child.move.hexId}, Tile ${child.move.tileValue}\n`;
+                output.textContent += `  Visits: ${child.visits}, Wins: ${child.wins.toFixed(2)}, Win%: ${winRate}%\n`;
+            });
+
+            // Now run full MCTS and compare
+            output.textContent += `\n\n=== RUNNING FULL MCTS (100 sims) ===\n`;
+            const ai = new MCTSPlayer(100);
+            const result = ai.getBestMove(game);
+
+            output.textContent += `\nBest move: Hex ${result.move.hexId}, Tile ${result.move.tileValue}\n`;
+            output.textContent += `Win rate: ${(result.stats.winRate * 100).toFixed(1)}%\n\n`;
+
+            output.textContent += `Top 5 moves:\n`;
+            result.stats.alternatives.forEach((alt, idx) => {
+                output.textContent += `  ${idx + 1}. Hex ${alt.move.hexId}, Tile ${alt.move.tileValue} - `;
+                output.textContent += `${alt.visits} visits, ${(alt.winRate * 100).toFixed(1)}% win\n`;
+            });
+
+            // Analyze the distribution
+            const winRates = result.stats.alternatives.map(a => a.winRate);
+            const avg = winRates.reduce((a,b) => a+b, 0) / winRates.length;
+            const min = Math.min(...winRates);
+            const max = Math.max(...winRates);
+
+            output.textContent += `\nWin rate range: ${(min*100).toFixed(1)}% to ${(max*100).toFixed(1)}%\n`;
+            output.textContent += `Average: ${(avg*100).toFixed(1)}%\n`;
+
+            if (avg < 0.4 || avg > 0.6) {
+                output.textContent += `\n<span class="error">❌ ERROR: Average should be ~50% for first move!</span>\n`;
+                output.textContent += `This indicates backpropagation is incorrect.\n`;
+            }
+
+            if (max - min < 0.05) {
+                output.textContent += `\n<span class="warn">⚠️  WARNING: Very little variance in win rates</span>\n`;
+                output.textContent += `Random playouts may not be discriminating moves well.\n`;
+            }
+        }
+
+        function debugBackpropagation() {
+            const output = document.getElementById('output');
+            output.textContent = '=== TESTING BACKPROPAGATION LOGIC ===\n\n';
+
+            // Create a simple tree manually
+            const game = new HexukiGameEngineV2();
+
+            output.textContent += `Starting position: Player ${game.currentPlayer} to move\n\n`;
+
+            const root = new MCTSNode(game);
+            output.textContent += `Root: playerJustMoved = ${root.playerJustMoved}\n`;
+            output.textContent += `Root: game.currentPlayer = ${root.game.currentPlayer}\n\n`;
+
+            // Add one child
+            const move = root.untriedMoves[0];
+            const child = root.addChild(move);
+
+            output.textContent += `Created child with move: Hex ${move.hexId}, Tile ${move.tileValue}\n`;
+            output.textContent += `Child: playerJustMoved = ${child.playerJustMoved}\n`;
+            output.textContent += `Child: game.currentPlayer = ${child.game.currentPlayer}\n\n`;
+
+            // Simulate a WIN for the player to move at child
+            output.textContent += `Testing: If player ${child.game.currentPlayer} wins from child position...\n`;
+            const winResult = 1.0;
+
+            output.textContent += `Backpropagating result: ${winResult}\n`;
+            child.update(winResult);
+
+            output.textContent += `Child after update:\n`;
+            output.textContent += `  visits: ${child.visits}, wins: ${child.wins}\n`;
+            output.textContent += `  win rate: ${(child.wins / child.visits * 100).toFixed(1)}%\n\n`;
+
+            output.textContent += `Root after update:\n`;
+            output.textContent += `  visits: ${root.visits}, wins: ${root.wins}\n`;
+            output.textContent += `  win rate: ${(root.wins / root.visits * 100).toFixed(1)}%\n\n`;
+
+            // Check if it makes sense
+            if (root.game.currentPlayer === child.playerJustMoved) {
+                // Child's player is same as root's current player
+                output.textContent += `Analysis: Child player IS root's current player\n`;
+                output.textContent += `Expected: Root should get HIGH value (child player won)\n`;
+                if (root.wins / root.visits > 0.9) {
+                    output.textContent += `<span class="good">✓ Correct!</span>\n`;
+                } else {
+                    output.textContent += `<span class="error">❌ Wrong! Root got ${root.wins}, expected ~1.0</span>\n`;
+                }
+            } else {
+                output.textContent += `Analysis: Child player is OPPONENT of root's current player\n`;
+                output.textContent += `Expected: Root should get LOW value (opponent won)\n`;
+                if (root.wins / root.visits < 0.1) {
+                    output.textContent += `<span class="good">✓ Correct!</span>\n`;
+                } else {
+                    output.textContent += `<span class="error">❌ Wrong! Root got ${root.wins}, expected ~0.0</span>\n`;
+                }
+            }
+        }
+    </script>
+</body>
+</html>

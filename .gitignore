@@ -1,0 +1,32 @@
+# Large data files
+*.csv
+__pycache__/
+*.pyc
+*.pyo
+
+# Build artifacts (C++)
+c++engine/build/
+*.o
+*.obj
+*.exe
+
+# But keep compiled WASM (needed to run the app)
+# hexuki.js and hexuki.wasm are intentionally tracked
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Temporary files
+*.tmp
+*.bak
+
+# Node modules (if any)
+node_modules/
+nul

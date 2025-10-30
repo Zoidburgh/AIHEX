@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Best Opening + Hybrid AI vs Random</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        .container {
+            background: #252526;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        h1 { color: #4ec9b0; }
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        button:hover { background: #1177bb; }
+        #log {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            max-height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            border: 1px solid #3c3c3c;
+        }
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-box {
+            background: #2d2d30;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4ec9b0;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #858585;
+            margin-top: 5px;
+        }
+        .info-box {
+            background: #2d2d30;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 3px solid #4ec9b0;
+        }
+        select {
+            padding: 8px;
+            background: #2d2d30;
+            border: 1px solid #3c3c3c;
+            color: #d4d4d4;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+        }
+        input[type="number"] {
+            padding: 8px;
+            background: #2d2d30;
+            border: 1px solid #3c3c3c;
+            color: #d4d4d4;
+            border-radius: 4px;
+            width: 100px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏆 Test Best Opening + Hybrid AI</h1>
+
+    <div class="container">
+        <div class="info-box">
+            <strong>Strategy:</strong><br>
+            • Opening: Uses data-driven best opening move<br>
+            • Midgame: Random/policy-based<br>
+            • Endgame (≤6 empty): Perfect minimax<br>
+            • Opponent: Pure random play<br><br>
+            <strong>Expected: ~78-82% win rate vs random</strong>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Configuration</h2>
+
+        <label>Opening Move:</label><br>
+        <select id="openingMove">
+            <option value="t2h6">t2h6 (78.0% WR - BEST)</option>
+            <option value="t3h14">t3h14 (76.0% WR)</option>
+            <option value="t4h7">t4h7 (72.0% WR)</option>
+            <option value="t1h12">t1h12 (72.0% WR)</option>
+            <option value="t3h12">t3h12 (70.0% WR)</option>
+            <option value="t5h12">t5h12 (70.0% WR)</option>
+            <option value="t4h14">t4h14 (70.0% WR)</option>
+            <option value="random">Random Opening (Baseline)</option>
+        </select>
+        <br><br>
+
+        <label>Games to Test:</label><br>
+        <input type="number" id="gamesToTest" value="100" min="10" max="1000">
+        <br><br>
+
+        <label>Minimax Threshold:</label><br>
+        <input type="number" id="minimaxThreshold" value="6" min="4" max="10">
+        <span style="color: #858585; margin-left: 10px;">← empty positions</span>
+    </div>
+
+    <div class="container">
+        <h2>Test Controls</h2>
+        <button onclick="testBestOpening()">Run Test</button>
+        <button onclick="compareAllTopOpenings()">Compare Top 7 Openings</button>
+        <button onclick="clearLog()">Clear Log</button>
+
+        <div class="stat-grid" id="stats" style="margin-top: 20px; display: none;">
+            <div class="stat-box">
+                <div class="stat-value" id="aiWins">0</div>
+                <div class="stat-label">AI Wins</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="randomWins">0</div>
+                <div class="stat-label">Random Wins</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="ties">0</div>
+                <div class="stat-label">Ties</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="winRate">0%</div>
+                <div class="stat-label">Win Rate</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Test Log</h2>
+        <div id="log"></div>
+    </div>
+
+    <script src="hexuki_game_engine_v2.js"></script>
+    <script src="minimax_endgame.js"></script>
+    <script>
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            logDiv.textContent += message + '\n';
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+        }
+
+        function parseOpening(openingStr) {
+            // Parse "t2h6" into {tile: 2, hexId: 6}
+            const match = openingStr.match(/t(\d+)h(\d+)/);
+            if (!match) return null;
+            return {
+                tileValue: parseInt(match[1]),
+                hexId: parseInt(match[2])
+            };
+        }
+
+        function chooseHybridMove(game, threshold) {
+            const emptyCount = game.board.filter(h => h.value === null).length;
+
+            // Use minimax for endgame
+            if (emptyCount <= threshold) {
+                const solver = new MinimaxEndgameSolver(game);
+                const move = solver.findBestMove(false);
+                if (move) {
+                    return { hexId: move.hexId, tileValue: move.tile };
+                }
+            }
+
+            // Random for midgame
+            const legalMoves = game.getAllValidMoves();
+            if (legalMoves.length === 0) return null;
+            return legalMoves[Math.floor(Math.random() * legalMoves.length)];
+        }
+
+        function chooseRandomMove(game) {
+            const legalMoves = game.getAllValidMoves();
+            if (legalMoves.length === 0) return null;
+            return legalMoves[Math.floor(Math.random() * legalMoves.length)];
+        }
+
+        function playGame(forcedOpening, threshold) {
+            const game = new HexukiGameEngineV2();
+            let moveCount = 0;
+            const maxMoves = 18;
+
+            // Move 1: Forced opening for Player 1
+            if (forcedOpening) {
+                game.makeMove(forcedOpening.hexId, forcedOpening.tileValue);
+                moveCount++;
+            }
+
+            // Rest of game
+            while (!game.gameEnded && moveCount < maxMoves) {
+                let move;
+
+                if (game.currentPlayer === 1) {
+                    // Player 1: Hybrid AI
+                    move = chooseHybridMove(game, threshold);
+                } else {
+                    // Player 2: Pure random
+                    move = chooseRandomMove(game);
+                }
+
+                if (!move) break;
+
+                game.makeMove(move.hexId, move.tileValue);
+                moveCount++;
+            }
+
+            const scores = game.calculateScores();
+            return {
+                player1Score: scores.player1,
+                player2Score: scores.player2,
+                winner: scores.player1 > scores.player2 ? 1 : scores.player2 > scores.player1 ? 2 : 0
+            };
+        }
+
+        async function testBestOpening() {
+            const openingStr = document.getElementById('openingMove').value;
+            const gamesToTest = parseInt(document.getElementById('gamesToTest').value);
+            const threshold = parseInt(document.getElementById('minimaxThreshold').value);
+
+            let forcedOpening = null;
+            if (openingStr !== 'random') {
+                forcedOpening = parseOpening(openingStr);
+                if (!forcedOpening) {
+                    log('Error: Invalid opening format');
+                    return;
+                }
+            }
+
+            log('='.repeat(80));
+            log(`Testing: ${openingStr} + Hybrid AI vs Random`);
+            log(`Games: ${gamesToTest}, Minimax threshold: ${threshold}`);
+            log('='.repeat(80));
+
+            let aiWins = 0;
+            let randomWins = 0;
+            let ties = 0;
+
+            for (let i = 0; i < gamesToTest; i++) {
+                const result = playGame(forcedOpening, threshold);
+
+                if (result.winner === 1) {
+                    aiWins++;
+                } else if (result.winner === 2) {
+                    randomWins++;
+                } else {
+                    ties++;
+                }
+
+                // Update UI every 10 games
+                if ((i + 1) % 10 === 0) {
+                    updateStats(aiWins, randomWins, ties, i + 1);
+                    await new Promise(resolve => setTimeout(resolve, 1));
+                }
+            }
+
+            updateStats(aiWins, randomWins, ties, gamesToTest);
+
+            const winRate = (aiWins / gamesToTest * 100).toFixed(1);
+
+            log('');
+            log('='.repeat(80));
+            log(`RESULTS:`);
+            log(`  AI Wins: ${aiWins} (${winRate}%)`);
+            log(`  Random Wins: ${randomWins} (${(randomWins/gamesToTest*100).toFixed(1)}%)`);
+            log(`  Ties: ${ties} (${(ties/gamesToTest*100).toFixed(1)}%)`);
+            log('='.repeat(80));
+        }
+
+        async function compareAllTopOpenings() {
+            const gamesToTest = parseInt(document.getElementById('gamesToTest').value);
+            const threshold = parseInt(document.getElementById('minimaxThreshold').value);
+
+            const topOpenings = [
+                {name: 't2h6', expected: 78.0},
+                {name: 't3h14', expected: 76.0},
+                {name: 't4h7', expected: 72.0},
+                {name: 't1h12', expected: 72.0},
+                {name: 't3h12', expected: 70.0},
+                {name: 't5h12', expected: 70.0},
+                {name: 't4h14', expected: 70.0}
+            ];
+
+            log('='.repeat(80));
+            log(`COMPARING TOP 7 OPENINGS vs RANDOM`);
+            log(`Games per opening: ${gamesToTest}`);
+            log('='.repeat(80));
+            log('');
+
+            const results = [];
+
+            for (const opening of topOpenings) {
+                const forcedOpening = parseOpening(opening.name);
+
+                let aiWins = 0;
+                let randomWins = 0;
+                let ties = 0;
+
+                for (let i = 0; i < gamesToTest; i++) {
+                    const result = playGame(forcedOpening, threshold);
+
+                    if (result.winner === 1) {
+                        aiWins++;
+                    } else if (result.winner === 2) {
+                        randomWins++;
+                    } else {
+                        ties++;
+                    }
+                }
+
+                const winRate = (aiWins / gamesToTest * 100);
+                results.push({
+                    name: opening.name,
+                    expected: opening.expected,
+                    actual: winRate,
+                    wins: aiWins,
+                    losses: randomWins,
+                    ties: ties
+                });
+
+                log(`${opening.name}: ${winRate.toFixed(1)}% (${aiWins}W-${randomWins}L-${ties}T) [Expected: ${opening.expected}%]`);
+
+                await new Promise(resolve => setTimeout(resolve, 1));
+            }
+
+            log('');
+            log('='.repeat(80));
+            log('SUMMARY:');
+
+            // Find best actual performer
+            results.sort((a, b) => b.actual - a.actual);
+            const best = results[0];
+
+            log(`Best performing opening: ${best.name} (${best.actual.toFixed(1)}%)`);
+            log(`Expected vs Actual difference: ${(best.actual - best.expected).toFixed(1)} percentage points`);
+            log('='.repeat(80));
+        }
+
+        function updateStats(wins, losses, ties, total) {
+            document.getElementById('stats').style.display = 'grid';
+            document.getElementById('aiWins').textContent = wins;
+            document.getElementById('randomWins').textContent = losses;
+            document.getElementById('ties').textContent = ties;
+
+            const winRate = (wins / total * 100).toFixed(1);
+            document.getElementById('winRate').textContent = winRate + '%';
+        }
+
+        log('Best Opening + Hybrid AI Tester Ready');
+        log('Select an opening and click "Run Test"');
+        log('');
+        log('Top openings from training data:');
+        log('  t2h6:  78.0% (BEST)');
+        log('  t3h14: 76.0%');
+        log('  t4h7:  72.0%');
+    </script>
+</body>
+</html>

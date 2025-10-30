@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Comprehensive Hybrid AI Comparison</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+        h1 { text-align: center; color: #00ff00; }
+        .test-section {
+            background: #0a0a0a;
+            border: 2px solid #00ff00;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            margin: 5px;
+        }
+        button:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+        }
+        pre {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 4px;
+            color: #00ff00;
+            max-height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .good { color: #00ff00; font-weight: bold; }
+        .bad { color: #ff0000; font-weight: bold; }
+        .warn { color: #ffff00; }
+        .progress {
+            color: #ffff00;
+            margin: 10px 0;
+            display: none;
+        }
+        .progress.active { display: block; }
+    </style>
+</head>
+<body>
+    <h1>🔬 Comprehensive Hybrid AI Analysis</h1>
+
+    <div class="test-section">
+        <h2>Test 1: Balanced Match (10 games)</h2>
+        <p>Each AI plays as both P1 and P2 to eliminate first-move advantage</p>
+
+        <button onclick="balancedMatch()" id="btn1">Run Balanced Match</button>
+
+        <div id="progress1" class="progress"></div>
+        <pre id="output1"></pre>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Endgame-Only Analysis</h2>
+        <p>Start from endgame positions to isolate minimax advantage</p>
+
+        <button onclick="endgameOnly()" id="btn2">Test Endgame Only (10 positions)</button>
+
+        <div id="progress2" class="progress"></div>
+        <pre id="output2"></pre>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Score Margin Analysis</h2>
+        <p>Compare average score margins, not just wins</p>
+
+        <button onclick="scoreMarginAnalysis()" id="btn3">Analyze Score Margins (20 games)</button>
+
+        <div id="progress3" class="progress"></div>
+        <pre id="output3"></pre>
+    </div>
+
+    <script src="hexuki_game_engine_v2.js"></script>
+    <script src="mcts_ai_player.js"></script>
+    <script src="minimax_endgame_solver.js"></script>
+
+    <script>
+        function setProgress(id, text) {
+            const prog = document.getElementById(`progress${id}`);
+            prog.textContent = text;
+            prog.classList.add('active');
+            document.getElementById(`btn${id}`).disabled = true;
+        }
+
+        function clearProgress(id) {
+            document.getElementById(`progress${id}`).classList.remove('active');
+            document.getElementById(`btn${id}`).disabled = false;
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        async function balancedMatch() {
+            const output = document.getElementById('output1');
+            output.textContent = '=== Balanced Match: 10 Games ===\n\n';
+            output.textContent += 'Configuration:\n';
+            output.textContent += '  Pure MCTS: 500 simulations per move\n';
+            output.textContent += '  Hybrid: 500 MCTS sims + Minimax at 8 tiles\n\n';
+
+            setProgress(1, 'Starting tournament...');
+
+            const results = {
+                mctsAsP1: {wins: 0, losses: 0, totalScore: 0, oppScore: 0},
+                mctsAsP2: {wins: 0, losses: 0, totalScore: 0, oppScore: 0}
+            };
+
+            // Play 5 games with MCTS as P1
+            for (let i = 0; i < 5; i++) {
+                setProgress(1, `Game ${i + 1}/10 (MCTS as P1)...`);
+                await sleep(10);
+
+                const game = new HexukiGameEngineV2();
+                const mcts = new MCTSPlayer(500);
+                const hybrid = new HybridAI(500, 8);
+
+                while (!game.gameEnded) {
+                    const ai = game.currentPlayer === 1 ? mcts : hybrid;
+                    const result = ai.getBestMove(game);
+                    game.makeMove(result.move.hexId, result.move.tileValue);
+                }
+
+                const scores = game.calculateScores();
+                results.mctsAsP1.totalScore += scores.player1;
+                results.mctsAsP1.oppScore += scores.player2;
+
+                if (scores.player1 > scores.player2) {
+                    results.mctsAsP1.wins++;
+                } else if (scores.player1 < scores.player2) {
+                    results.mctsAsP1.losses++;
+                }
+
+                output.textContent += `Game ${i + 1}: MCTS(P1) ${scores.player1} - ${scores.player2} Hybrid(P2) `;
+                output.textContent += `[${scores.player1 > scores.player2 ? 'MCTS' : 'Hybrid'} wins]\n`;
+            }
+
+            output.textContent += '\n';
+
+            // Play 5 games with MCTS as P2
+            for (let i = 0; i < 5; i++) {
+                setProgress(1, `Game ${i + 6}/10 (MCTS as P2)...`);
+                await sleep(10);
+
+                const game = new HexukiGameEngineV2();
+                const mcts = new MCTSPlayer(500);
+                const hybrid = new HybridAI(500, 8);
+
+                while (!game.gameEnded) {
+                    const ai = game.currentPlayer === 1 ? hybrid : mcts;
+                    const result = ai.getBestMove(game);
+                    game.makeMove(result.move.hexId, result.move.tileValue);
+                }
+
+                const scores = game.calculateScores();
+                results.mctsAsP2.totalScore += scores.player2;
+                results.mctsAsP2.oppScore += scores.player1;
+
+                if (scores.player2 > scores.player1) {
+                    results.mctsAsP2.wins++;
+                } else if (scores.player2 < scores.player1) {
+                    results.mctsAsP2.losses++;
+                }
+
+                output.textContent += `Game ${i + 6}: Hybrid(P1) ${scores.player1} - ${scores.player2} MCTS(P2) `;
+                output.textContent += `[${scores.player2 > scores.player1 ? 'MCTS' : 'Hybrid'} wins]\n`;
+            }
+
+            // Calculate statistics
+            const mctsWins = results.mctsAsP1.wins + results.mctsAsP2.wins;
+            const hybridWins = results.mctsAsP1.losses + results.mctsAsP2.losses;
+            const mctsAvgScore = (results.mctsAsP1.totalScore + results.mctsAsP2.totalScore) / 10;
+            const hybridAvgScore = (results.mctsAsP1.oppScore + results.mctsAsP2.oppScore) / 10;
+
+            output.textContent += '\n=== BALANCED RESULTS ===\n';
+            output.textContent += `MCTS total wins: ${mctsWins}/10 (${(mctsWins/10*100).toFixed(1)}%)\n`;
+            output.textContent += `Hybrid total wins: ${hybridWins}/10 (${(hybridWins/10*100).toFixed(1)}%)\n`;
+            output.textContent += `MCTS avg score: ${mctsAvgScore.toFixed(0)}\n`;
+            output.textContent += `Hybrid avg score: ${hybridAvgScore.toFixed(0)}\n\n`;
+
+            if (hybridWins > mctsWins) {
+                output.textContent += `<span class="good">✓ Hybrid AI is stronger overall!</span>\n`;
+            } else if (mctsWins > hybridWins) {
+                output.textContent += `<span class="warn">⚠ Pure MCTS won more games</span>\n`;
+                output.textContent += `This suggests minimax endgame advantage is small with 500 sims\n`;
+            } else {
+                output.textContent += `<span class="warn">Tied - inconclusive</span>\n`;
+            }
+
+            clearProgress(1);
+        }
+
+        async function endgameOnly() {
+            const output = document.getElementById('output2');
+            output.textContent = '=== Endgame-Only Comparison ===\n\n';
+            output.textContent += 'Testing from positions with 8 tiles remaining\n';
+            output.textContent += '(Minimax solves perfectly vs MCTS guesses)\n\n';
+
+            setProgress(2, 'Creating endgame positions...');
+
+            let mctsWins = 0, hybridWins = 0, draws = 0;
+            let mctsTotal = 0, hybridTotal = 0;
+
+            for (let i = 0; i < 10; i++) {
+                setProgress(2, `Endgame ${i + 1}/10...`);
+                await sleep(10);
+
+                // Create random position with 8 tiles left
+                const game = createPositionWithTilesRemaining(8);
+                const startingPlayer = game.currentPlayer;
+
+                const mcts = new MCTSPlayer(500);
+                const hybrid = new HybridAI(500, 8);
+
+                while (!game.gameEnded) {
+                    const ai = game.currentPlayer === startingPlayer ? mcts : hybrid;
+                    const result = ai.getBestMove(game);
+                    game.makeMove(result.move.hexId, result.move.tileValue);
+                }
+
+                const scores = game.calculateScores();
+                const mctsScore = startingPlayer === 1 ? scores.player1 : scores.player2;
+                const hybridScore = startingPlayer === 1 ? scores.player2 : scores.player1;
+
+                mctsTotal += mctsScore;
+                hybridTotal += hybridScore;
+
+                if (mctsScore > hybridScore) mctsWins++;
+                else if (hybridScore > mctsScore) hybridWins++;
+                else draws++;
+
+                output.textContent += `Position ${i + 1}: MCTS ${mctsScore} - ${hybridScore} Hybrid `;
+                output.textContent += `[${mctsScore > hybridScore ? 'MCTS' : hybridScore > mctsScore ? 'Hybrid' : 'Draw'}]\n`;
+            }
+
+            output.textContent += '\n=== ENDGAME RESULTS ===\n';
+            output.textContent += `MCTS wins: ${mctsWins}/10\n`;
+            output.textContent += `Hybrid wins: ${hybridWins}/10\n`;
+            output.textContent += `Draws: ${draws}/10\n`;
+            output.textContent += `MCTS avg: ${(mctsTotal / 10).toFixed(0)}\n`;
+            output.textContent += `Hybrid avg: ${(hybridTotal / 10).toFixed(0)}\n\n`;
+
+            if (hybridWins > mctsWins) {
+                output.textContent += `<span class="good">✓ Minimax provides clear endgame advantage!</span>\n`;
+            } else {
+                output.textContent += `<span class="warn">⚠ Advantage unclear - positions may already be decided</span>\n`;
+            }
+
+            clearProgress(2);
+        }
+
+        async function scoreMarginAnalysis() {
+            const output = document.getElementById('output3');
+            output.textContent = '=== Score Margin Analysis (20 games) ===\n\n';
+
+            setProgress(3, 'Running extensive comparison...');
+
+            const mctsMargins = [];
+            const hybridMargins = [];
+
+            // 10 games with MCTS as P1
+            for (let i = 0; i < 10; i++) {
+                setProgress(3, `Game ${i + 1}/20...`);
+                await sleep(10);
+
+                const game = new HexukiGameEngineV2();
+                const mcts = new MCTSPlayer(500);
+                const hybrid = new HybridAI(500, 8);
+
+                while (!game.gameEnded) {
+                    const ai = game.currentPlayer === 1 ? mcts : hybrid;
+                    const result = ai.getBestMove(game);
+                    game.makeMove(result.move.hexId, result.move.tileValue);
+                }
+
+                const scores = game.calculateScores();
+                mctsMargins.push(scores.player1 - scores.player2);
+            }
+
+            // 10 games with Hybrid as P1
+            for (let i = 0; i < 10; i++) {
+                setProgress(3, `Game ${i + 11}/20...`);
+                await sleep(10);
+
+                const game = new HexukiGameEngineV2();
+                const mcts = new MCTSPlayer(500);
+                const hybrid = new HybridAI(500, 8);
+
+                while (!game.gameEnded) {
+                    const ai = game.currentPlayer === 1 ? hybrid : mcts;
+                    const result = ai.getBestMove(game);
+                    game.makeMove(result.move.hexId, result.move.tileValue);
+                }
+
+                const scores = game.calculateScores();
+                hybridMargins.push(scores.player1 - scores.player2);
+            }
+
+            // Calculate statistics
+            const mctsAvgMargin = mctsMargins.reduce((a, b) => a + b, 0) / mctsMargins.length;
+            const hybridAvgMargin = hybridMargins.reduce((a, b) => a + b, 0) / hybridMargins.length;
+
+            const mctsWins = mctsMargins.filter(m => m > 0).length;
+            const hybridWins = hybridMargins.filter(m => m > 0).length;
+
+            output.textContent += 'MCTS as Player 1:\n';
+            output.textContent += `  Wins: ${mctsWins}/10\n`;
+            output.textContent += `  Avg margin: ${mctsAvgMargin.toFixed(0)}\n`;
+            output.textContent += `  Margins: [${mctsMargins.map(m => m.toFixed(0)).join(', ')}]\n\n`;
+
+            output.textContent += 'Hybrid as Player 1:\n';
+            output.textContent += `  Wins: ${hybridWins}/10\n`;
+            output.textContent += `  Avg margin: ${hybridAvgMargin.toFixed(0)}\n`;
+            output.textContent += `  Margins: [${hybridMargins.map(m => m.toFixed(0)).join(', ')}]\n\n`;
+
+            output.textContent += '=== ANALYSIS ===\n';
+
+            const marginDiff = hybridAvgMargin - mctsAvgMargin;
+            output.textContent += `Hybrid margin advantage: ${marginDiff.toFixed(0)} points\n\n`;
+
+            if (marginDiff > 100) {
+                output.textContent += `<span class="good">✓ Hybrid has significant advantage!</span>\n`;
+            } else if (marginDiff > 0) {
+                output.textContent += `<span class="warn">Hybrid has slight advantage (may need more sims)</span>\n`;
+            } else {
+                output.textContent += `<span class="bad">No clear advantage detected</span>\n`;
+                output.textContent += `\nPossible reasons:\n`;
+                output.textContent += `• 500 MCTS sims may be strong enough to play decent endgames\n`;
+                output.textcontent += `• Minimax threshold of 8 may be too late\n`;
+                output.textContent += `• Try comparing 100-sim MCTS vs 100-sim Hybrid for clearer gap\n`;
+            }
+
+            clearProgress(3);
+        }
+
+        function createPositionWithTilesRemaining(tilesRemaining) {
+            const game = new HexukiGameEngineV2();
+            const movesToPlay = 18 - tilesRemaining;
+            let movesPlayed = 0;
+
+            while (movesPlayed < movesToPlay) {
+                const moves = game.getAllValidMoves();
+                if (moves.length === 0) break;
+                const randomMove = moves[Math.floor(Math.random() * moves.length)];
+                game.makeMove(randomMove.hexId, randomMove.tileValue);
+                movesPlayed++;
+            }
+
+            return game;
+        }
+    </script>
+</body>
+</html>

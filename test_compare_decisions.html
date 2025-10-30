@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Compare AI Decisions</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        pre {
+            background: #0a0a0a;
+            padding: 15px;
+            border: 2px solid #00ff00;
+            border-radius: 4px;
+            color: #00ff00;
+            white-space: pre-wrap;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .diff { color: #ffff00; font-weight: bold; }
+        .same { color: #00ff00; }
+    </style>
+</head>
+<body>
+    <h1>Compare 100-sim vs 2000-sim Decisions</h1>
+
+    <button onclick="compareDecisions()">Compare First Move Decisions</button>
+    <button onclick="playAndCompare()">Play Full Game & Compare</button>
+
+    <pre id="output"></pre>
+
+    <script src="hexuki_game_engine_v2.js"></script>
+    <script src="mcts_ai_player.js"></script>
+    <script>
+        function compareDecisions() {
+            const output = document.getElementById('output');
+            output.textContent = '=== Comparing First Move ===\n\n';
+
+            const game = new HexukiGameEngineV2();
+
+            // 100 sims
+            output.textContent += 'Running 100-sim AI...\n';
+            const ai100 = new MCTSPlayer(100);
+            const result100 = ai100.getBestMove(game);
+
+            // 2000 sims
+            output.textContent += 'Running 2000-sim AI...\n';
+            const ai2000 = new MCTSPlayer(2000);
+            const result2000 = ai2000.getBestMove(game);
+
+            output.textContent += '\n=== RESULTS ===\n\n';
+
+            output.textContent += '100-sim choice:\n';
+            output.textContent += `  Move: Hex ${result100.move.hexId}, Tile ${result100.move.tileValue}\n`;
+            output.textContent += `  Win rate: ${(result100.stats.winRate * 100).toFixed(1)}%\n`;
+            output.textContent += `  Simulations: ${result100.stats.simulations}\n`;
+            output.textContent += `  Visits to chosen move: ${result100.stats.visits}\n\n`;
+
+            output.textContent += '2000-sim choice:\n';
+            output.textContent += `  Move: Hex ${result2000.move.hexId}, Tile ${result2000.move.tileValue}\n`;
+            output.textContent += `  Win rate: ${(result2000.stats.winRate * 100).toFixed(1)}%\n`;
+            output.textContent += `  Simulations: ${result2000.stats.simulations}\n`;
+            output.textContent += `  Visits to chosen move: ${result2000.stats.visits}\n\n`;
+
+            const same = (result100.move.hexId === result2000.move.hexId &&
+                         result100.move.tileValue === result2000.move.tileValue);
+
+            if (same) {
+                output.textContent += '<span class="same">✓ Both AIs chose the SAME move</span>\n';
+            } else {
+                output.textContent += '<span class="diff">✗ AIs chose DIFFERENT moves!</span>\n';
+            }
+
+            // Show top alternatives for each
+            output.textContent += '\n100-sim top 5:\n';
+            result100.stats.alternatives.slice(0, 5).forEach((alt, i) => {
+                output.textContent += `  ${i+1}. Hex ${alt.move.hexId}, Tile ${alt.move.tileValue} - `;
+                output.textContent += `${alt.visits} visits, ${(alt.winRate * 100).toFixed(1)}% win\n`;
+            });
+
+            output.textContent += '\n2000-sim top 5:\n';
+            result2000.stats.alternatives.slice(0, 5).forEach((alt, i) => {
+                output.textContent += `  ${i+1}. Hex ${alt.move.hexId}, Tile ${alt.move.tileValue} - `;
+                output.textContent += `${alt.visits} visits, ${(alt.winRate * 100).toFixed(1)}% win\n`;
+            });
+        }
+
+        async function playAndCompare() {
+            const output = document.getElementById('output');
+            output.textContent = '=== Playing 100-sim vs 2000-sim ===\n\n';
+
+            const game = new HexukiGameEngineV2();
+            const ai100 = new MCTSPlayer(100);
+            const ai2000 = new MCTSPlayer(2000);
+
+            const moves = [];
+
+            while (!game.gameEnded) {
+                const currentAI = game.currentPlayer === 1 ? ai100 : ai2000;
+                const simCount = game.currentPlayer === 1 ? '100' : '2000';
+
+                output.textContent += `Move ${game.moveCount + 1} (P${game.currentPlayer}, ${simCount} sims): `;
+
+                const result = currentAI.getBestMove(game);
+                game.makeMove(result.move.hexId, result.move.tileValue);
+
+                output.textContent += `Hex ${result.move.hexId}, Tile ${result.move.tileValue} `;
+                output.textContent += `(${(result.stats.winRate * 100).toFixed(1)}% win rate)\n`;
+
+                moves.push({
+                    player: game.currentPlayer === 1 ? 2 : 1,
+                    move: result.move,
+                    winRate: result.stats.winRate,
+                    simCount: simCount
+                });
+
+                // Allow UI updates
+                await new Promise(resolve => setTimeout(resolve, 10));
+            }
+
+            const scores = game.calculateScores();
+            const winner = scores.player1 > scores.player2 ? 1 :
+                          scores.player2 > scores.player1 ? 2 : 0;
+
+            output.textContent += `\n=== GAME OVER ===\n`;
+            output.textContent += `Player 1 (100 sims): ${scores.player1}\n`;
+            output.textContent += `Player 2 (2000 sims): ${scores.player2}\n`;
+            output.textContent += `Winner: ${winner === 0 ? 'DRAW' : 'Player ' + winner}\n\n`;
+
+            if (winner === 1) {
+                output.textContent += '<span class="diff">❌ PROBLEM: 100-sim beat 2000-sim!</span>\n';
+            } else if (winner === 2) {
+                output.textContent += '<span class="same">✓ 2000-sim won as expected</span>\n';
+            } else {
+                output.textContent += 'Draw - inconclusive\n';
+            }
+        }
+    </script>
+</body>
+</html>

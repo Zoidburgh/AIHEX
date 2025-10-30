@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Hexuki WASM Test</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        .output {
+            white-space: pre;
+            background: #252526;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        button:hover {
+            background: #1177bb;
+        }
+        .success { color: #4ec9b0; }
+        .error { color: #f48771; }
+    </style>
+</head>
+<body>
+    <h1>Hexuki C++ WebAssembly Test</h1>
+
+    <div>
+        <button onclick="testBasicFunctions()">Test Basic Functions</button>
+        <button onclick="testMCTS()">Test MCTS AI (10k sims)</button>
+        <button onclick="testMinimax()">Test Minimax AI (depth 6)</button>
+    </div>
+
+    <div id="output" class="output">Loading WebAssembly...</div>
+
+    <!-- Load the WASM module FIRST -->
+    <script src="wasm/hexuki.js"></script>
+
+    <script>
+        let Module;
+        let output = document.getElementById('output');
+
+        function log(text) {
+            output.textContent += text + '\n';
+        }
+
+        function clearLog() {
+            output.textContent = '';
+        }
+
+        // Load the WASM module (hexuki.js is now loaded above)
+        HexukiWasm().then(function(m) {
+            Module = m;
+            log('✓ WebAssembly loaded successfully!\n');
+            log('Available functions:');
+            log('  - initialize()');
+            log('  - reset()');
+            log('  - makeMove(hexId, tileValue)');
+            log('  - getScoreP1(), getScoreP2()');
+            log('  - mctsFindBestMove(sims, timeMs, useTime)');
+            log('  - minimaxFindBestMove(depth, timeMs)');
+            log('\nClick buttons above to test!');
+        }).catch(function(err) {
+            log('ERROR loading WebAssembly: ' + err);
+        });
+
+        function testBasicFunctions() {
+            clearLog();
+            log('=== Testing Basic Functions ===\n');
+
+            try {
+                // Initialize (using embind API - no underscore prefix)
+                Module.initialize();
+                log('✓ Initialized\n');
+
+                // Get initial state
+                const player = Module.getCurrentPlayer();
+                const p1Score = Module.getScoreP1();
+                const p2Score = Module.getScoreP2();
+                log('Initial state:');
+                log('  Current player: ' + player);
+                log('  P1 score: ' + p1Score);
+                log('  P2 score: ' + p2Score + '\n');
+
+                // Get valid moves (returns std::string directly)
+                const movesJson = Module.getValidMoves();
+                const moves = JSON.parse(movesJson);
+                log('Valid moves: ' + moves.length);
+                log('  First 5: ' + moves.slice(0, 5).map(m => `h${m.h}t${m.t}`).join(', ') + '\n');
+
+                // Make a move
+                const success = Module.makeMove(7, 9);
+                log('Make move h7t9: ' + (success ? '✓ Success' : '✗ Failed'));
+
+                // Check new state
+                const newPlayer = Module.getCurrentPlayer();
+                const newP1Score = Module.getScoreP1();
+                const newP2Score = Module.getScoreP2();
+                log('After move:');
+                log('  Current player: ' + newPlayer);
+                log('  P1 score: ' + newP1Score);
+                log('  P2 score: ' + newP2Score + '\n');
+
+                log('✓ All basic functions working!');
+            } catch (err) {
+                log('✗ ERROR: ' + err);
+            }
+        }
+
+        function testMCTS() {
+            clearLog();
+            log('=== Testing MCTS AI ===\n');
+
+            try {
+                Module.initialize();
+                Module.reset();
+                log('Starting MCTS search (10,000 simulations)...\n');
+
+                const startTime = performance.now();
+                const resultJson = Module.mctsFindBestMove(10000, 5000, false);
+                const endTime = performance.now();
+
+                const result = JSON.parse(resultJson);
+
+                log('MCTS Result:');
+                log('  Best move: h' + result.hexId + 't' + result.tileValue);
+                log('  Visits: ' + result.visits);
+                log('  Win rate: ' + result.winRate.toFixed(3));
+                log('  Simulations: ' + result.simulations);
+                log('  Time: ' + result.timeMs.toFixed(1) + ' ms');
+                log('  Sims/sec: ' + Math.floor(result.simulations * 1000 / result.timeMs));
+                log('\n✓ MCTS working! Super fast! 🚀');
+            } catch (err) {
+                log('✗ ERROR: ' + err);
+            }
+        }
+
+        function testMinimax() {
+            clearLog();
+            log('=== Testing Minimax AI ===\n');
+
+            try {
+                Module.initialize();
+                Module.reset();
+                log('Starting Minimax search (depth 6)...\n');
+
+                const resultJson = Module.minimaxFindBestMove(6, 5000);
+                const result = JSON.parse(resultJson);
+
+                log('Minimax Result:');
+                log('  Best move: h' + result.hexId + 't' + result.tileValue);
+                log('  Score: ' + result.score);
+                log('  Depth: ' + result.depth);
+                log('  Nodes: ' + result.nodes.toLocaleString());
+                log('  Time: ' + result.timeMs.toFixed(1) + ' ms');
+                log('  Nodes/sec: ' + Math.floor(result.nodes * 1000 / result.timeMs).toLocaleString());
+                log('\n✓ Minimax working!');
+            } catch (err) {
+                log('✗ ERROR: ' + err);
+            }
+        }
+    </script>
+</body>
+</html>

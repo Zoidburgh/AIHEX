@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Phase 1 Runner - Simplified</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+        }
+        h1 { color: #00ff00; }
+        #output {
+            background: #000;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            height: 600px;
+            overflow-y: auto;
+            font-size: 12px;
+            white-space: pre-wrap;
+        }
+        button {
+            background: #00ff00;
+            color: #1a1a1a;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover { background: #00cc00; }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        .error { color: #ff0000; }
+        .success { color: #00ff00; }
+        .warn { color: #ff9900; }
+    </style>
+</head>
+<body>
+    <h1>Phase 1 Test Runner - Simplified</h1>
+    <button id="sanityBtn" onclick="runSanity()">Run Sanity Tests</button>
+    <button id="phase1Btn" onclick="runPhase1()" disabled>Run Phase 1 (1000 Games)</button>
+    <button onclick="clearOutput()">Clear Output</button>
+    <div id="output"></div>
+
+    <script src="hexuki_game_engine_v2.js"></script>
+    <script src="hexuki_ai_trainer.js"></script>
+    <script>
+        const output = document.getElementById('output');
+
+        // Override console.log
+        const originalLog = console.log;
+        console.log = function(...args) {
+            originalLog.apply(console, args);
+            const message = args.map(arg =>
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+
+            let className = '';
+            if (message.includes('❌') || message.includes('ERROR')) className = 'error';
+            else if (message.includes('✅') || message.includes('passed')) className = 'success';
+            else if (message.includes('⚠️') || message.includes('WARN')) className = 'warn';
+
+            const line = document.createElement('div');
+            line.className = className;
+            line.textContent = message;
+            output.appendChild(line);
+            output.scrollTop = output.scrollHeight;
+        };
+
+        function clearOutput() {
+            output.innerHTML = '';
+        }
+
+        function runSanity() {
+            clearOutput();
+            console.log('=== RUNNING SANITY TESTS ===\n');
+            document.getElementById('sanityBtn').disabled = true;
+
+            try {
+                // Create mock HexukiGame object for the trainer
+                window.HexukiGame = {
+                    board: { board: [] },
+                    player1Tiles: [1,2,3,4,5,6,7,8,9],
+                    player2Tiles: [1,2,3,4,5,6,7,8,9],
+                    currentPlayer: 1
+                };
+
+                const logger = new HexukiAI.AILogger(HexukiAI.LogLevel.INFO);
+                const passed = HexukiAI.SanityTests.runAll(logger);
+
+                if (passed) {
+                    console.log('\n✅ All sanity tests PASSED!');
+                    document.getElementById('phase1Btn').disabled = false;
+                } else {
+                    console.log('\n❌ Some sanity tests FAILED');
+                }
+            } catch (error) {
+                console.log('❌ ERROR:', error.message);
+                console.log(error.stack);
+            }
+
+            document.getElementById('sanityBtn').disabled = false;
+        }
+
+        async function runPhase1() {
+            clearOutput();
+            console.log('=== RUNNING PHASE 1 (1000 Games) ===\n');
+            document.getElementById('phase1Btn').disabled = true;
+
+            try {
+                const runner = new HexukiAI.Phase1Runner();
+                const startTime = Date.now();
+
+                const success = await runner.run(1000);
+
+                const elapsed = (Date.now() - startTime) / 1000;
+                console.log(`\nElapsed time: ${elapsed.toFixed(2)}s`);
+                console.log(`Speed: ${(1000 / elapsed).toFixed(1)} games/sec`);
+
+                const policySummary = runner.policy.getSummary();
+                const logSummary = runner.logger.getSummary();
+
+                console.log('\n=== SUMMARY ===');
+                console.log(`Games played: ${policySummary.totalGamesPlayed}`);
+                console.log(`Errors: ${logSummary.errors}`);
+                console.log(`Warnings: ${logSummary.warnings}`);
+
+                if (success) {
+                    console.log('\n✅ PHASE 1 COMPLETE - All systems working!');
+                    console.log('🎉 Ready to proceed to Phase 2!');
+                } else {
+                    console.log('\n❌ PHASE 1 FAILED - Check errors above');
+                }
+            } catch (error) {
+                console.log('❌ ERROR:', error.message);
+                console.log(error.stack);
+            }
+
+            document.getElementById('phase1Btn').disabled = false;
+        }
+
+        console.log('Ready! Click "Run Sanity Tests" to begin.\n');
+    </script>
+</body>
+</html>

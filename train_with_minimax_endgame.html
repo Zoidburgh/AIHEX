@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Train with Minimax Endgame Strategy</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        .container {
+            background: #252526;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        h1 { color: #4ec9b0; }
+        h2 { color: #569cd6; }
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button:hover { background: #1177bb; }
+        button.danger {
+            background: #c72e0f;
+        }
+        button.danger:hover {
+            background: #e03e1f;
+        }
+        button:disabled {
+            background: #3c3c3c;
+            cursor: not-allowed;
+        }
+        .info-box {
+            background: #2d2d30;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 3px solid #4ec9b0;
+        }
+        .warning-box {
+            background: #2d2d30;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            border-left: 3px solid #f48771;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-box {
+            background: #2d2d30;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #4ec9b0;
+        }
+        .stat-label {
+            font-size: 12px;
+            color: #858585;
+            margin-top: 5px;
+        }
+        #log {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            border: 1px solid #3c3c3c;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #1e1e1e;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0e639c, #1177bb);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+        }
+        input[type="number"] {
+            padding: 8px;
+            background: #2d2d30;
+            border: 1px solid #3c3c3c;
+            color: #d4d4d4;
+            border-radius: 4px;
+            width: 100px;
+        }
+        .minimax-highlight {
+            color: #4ec9b0;
+            font-weight: bold;
+        }
+        .random-highlight {
+            color: #ce9178;
+        }
+    </style>
+</head>
+<body>
+    <h1>🎯 Training Strategy: Random + Perfect Minimax Endgame</h1>
+
+    <div class="container">
+        <h2>Strategy Overview</h2>
+        <div class="info-box">
+            <strong>How this training works:</strong><br><br>
+            <strong>First ~12 moves (Random Phase):</strong><br>
+            • Both players make random moves<br>
+            • Creates diverse position variety<br>
+            • Explores the game tree<br><br>
+            <strong>Last 6 moves (Minimax Phase):</strong><br>
+            • Both players use PERFECT minimax play<br>
+            • Generates optimal endgame examples<br>
+            • Policy learns what perfect endgame looks like<br><br>
+            <strong>Result:</strong> Policy trains on openings with perfect endgame data!
+        </div>
+
+        <div class="warning-box">
+            ⚠️ This creates a <strong>NEW</strong> policy from scratch using random+minimax games.<br>
+            For best results, run 10,000-50,000 games.
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Training Configuration</h2>
+
+        <label>Games to Train:</label><br>
+        <input type="number" id="gamesToTrain" value="100" min="1" max="100000">
+        <span style="color: #858585; margin-left: 10px;">← Recommend 10,000+ for good policy</span>
+        <br><br>
+
+        <label>Minimax Threshold (empty positions):</label><br>
+        <input type="number" id="minimaxThreshold" value="6" min="4" max="10">
+        <span style="color: #858585; margin-left: 10px;">← Switch to minimax when this many empty</span>
+        <br><br>
+
+        <label>Update Interval (games):</label><br>
+        <input type="number" id="updateInterval" value="100" min="10" max="1000">
+        <span style="color: #858585; margin-left: 10px;">← How often to update stats</span>
+    </div>
+
+    <div class="container">
+        <h2>Training Controls</h2>
+        <button onclick="startTraining()" id="startBtn">Start Training</button>
+        <button onclick="stopTraining()" id="stopBtn" disabled>Stop Training</button>
+        <button onclick="downloadPolicy()" id="downloadBtn" disabled>Download Policy</button>
+        <button onclick="clearLog()">Clear Log</button>
+
+        <div class="progress-bar" style="margin-top: 20px;">
+            <div class="progress-fill" id="progressBar" style="width: 0%">0%</div>
+        </div>
+
+        <div class="stats-grid" id="stats">
+            <div class="stat-box">
+                <div class="stat-value" id="gamesPlayed">0</div>
+                <div class="stat-label">Games Played</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="avgRandomMoves">0</div>
+                <div class="stat-label">Avg Random Moves</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="avgMinimaxMoves">0</div>
+                <div class="stat-label">Avg Minimax Moves</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value" id="perfectEndgames">0</div>
+                <div class="stat-label">Perfect Endgames</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Training Log</h2>
+        <div id="log"></div>
+    </div>
+
+    <script src="hexuki_game_engine_v2.js"></script>
+    <script src="minimax_endgame.js"></script>
+    <script src="minimax_training_strategy.js"></script>
+    <script>
+        let policy = null;
+        let trainer = null;
+        let policyUpdater = null;
+        let isTraining = false;
+        let trainingInterval = null;
+
+        function log(message) {
+            const logDiv = document.getElementById('log');
+            logDiv.textContent += message + '\n';
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        function clearLog() {
+            document.getElementById('log').textContent = '';
+        }
+
+        function updateStats() {
+            if (!trainer || !policyUpdater) return;
+
+            const trainerStats = trainer.getStats();
+            const updaterStats = policyUpdater.getStats();
+
+            document.getElementById('gamesPlayed').textContent = trainerStats.gamesPlayed.toLocaleString();
+            document.getElementById('avgRandomMoves').textContent = trainerStats.avgRandomMovesPerGame.toFixed(1);
+            document.getElementById('avgMinimaxMoves').textContent = trainerStats.avgMinimaxMovesPerGame.toFixed(1);
+            document.getElementById('perfectEndgames').textContent = trainerStats.perfectEndgamesGenerated.toLocaleString();
+        }
+
+        function updateProgress(current, total) {
+            const percent = Math.round((current / total) * 100);
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.width = percent + '%';
+            progressBar.textContent = `${percent}% (${current.toLocaleString()} / ${total.toLocaleString()})`;
+        }
+
+        async function startTraining() {
+            const gamesToTrain = parseInt(document.getElementById('gamesToTrain').value);
+            const threshold = parseInt(document.getElementById('minimaxThreshold').value);
+            const updateInterval = parseInt(document.getElementById('updateInterval').value);
+
+            if (gamesToTrain < 1 || gamesToTrain > 100000) {
+                alert('Please enter a valid number of games (1-100,000)');
+                return;
+            }
+
+            // Initialize policy
+            policy = {
+                version: '2.0',
+                created: new Date().toISOString(),
+                lastUpdated: new Date().toISOString(),
+                totalGamesPlayed: 0,
+                trainingMethod: `random_${threshold}_minimax_endgame`,
+                database: {}
+            };
+
+            trainer = new MinimaxTrainingStrategy(threshold);
+            policyUpdater = new MinimaxPolicyUpdater(policy);
+
+            isTraining = true;
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('downloadBtn').disabled = true;
+
+            log('='.repeat(80));
+            log(`Starting training: ${gamesToTrain.toLocaleString()} games`);
+            log(`Strategy: Random opening + Minimax endgame (threshold=${threshold})`);
+            log('='.repeat(80));
+
+            const game = new HexukiGameEngineV2();
+            let gamesCompleted = 0;
+
+            // Training loop
+            while (isTraining && gamesCompleted < gamesToTrain) {
+                try {
+                    log(`[DEBUG] Starting game ${gamesCompleted + 1}...`);
+
+                    // Play a game
+                    const result = trainer.playTrainingGame(game);
+
+                    log(`[DEBUG] Game completed: ${result.randomMovesUsed} random + ${result.minimaxMovesUsed} minimax`);
+
+                    // Record in policy
+                    policyUpdater.recordGame(result, game);
+
+                    log(`[DEBUG] Game recorded in policy`);
+
+                    gamesCompleted++;
+
+                    // Update UI periodically
+                    if (gamesCompleted % updateInterval === 0 || gamesCompleted === gamesToTrain) {
+                        updateStats();
+                        updateProgress(gamesCompleted, gamesToTrain);
+
+                        const lastGame = result;
+                        log(`Game ${gamesCompleted}: ${lastGame.randomMovesUsed} random + ${lastGame.minimaxMovesUsed} minimax = Winner P${lastGame.winner || 'TIE'}`);
+
+                        // Small delay to prevent UI freeze
+                        await new Promise(resolve => setTimeout(resolve, 1));
+                    }
+                } catch (error) {
+                    log(`[ERROR] ${error.message}`);
+                    log(`[ERROR] Stack: ${error.stack}`);
+                    break;
+                }
+            }
+
+            if (isTraining) {
+                log('='.repeat(80));
+                log(`Training complete! ${gamesCompleted.toLocaleString()} games played`);
+                log(`Total states in policy: ${Object.keys(policy.database).length.toLocaleString()}`);
+                log('='.repeat(80));
+            } else {
+                log('Training stopped by user');
+                log(`Partial training: ${gamesCompleted.toLocaleString()} games completed`);
+                log(`Total states in policy: ${Object.keys(policy.database).length.toLocaleString()}`);
+            }
+
+            // Always enable download if we have any games
+            if (gamesCompleted > 0) {
+                document.getElementById('downloadBtn').disabled = false;
+            }
+
+            isTraining = false;
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+        }
+
+        function stopTraining() {
+            isTraining = false;
+            log('Stopping training...');
+        }
+
+        function downloadPolicy() {
+            if (!policy) {
+                alert('No policy to download!');
+                return;
+            }
+
+            const timestamp = Date.now();
+            const filename = `hexuki_policy_random_minimax_${policy.totalGamesPlayed}games_${timestamp}.json`;
+
+            const blob = new Blob([JSON.stringify(policy, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+
+            URL.revokeObjectURL(url);
+
+            log(`Downloaded: ${filename}`);
+        }
+
+        // Check dependencies
+        log('='.repeat(80));
+        log('DEPENDENCY CHECK:');
+        log(`  HexukiGameEngineV2: ${typeof HexukiGameEngineV2 !== 'undefined' ? 'LOADED' : 'MISSING!'}`);
+        log(`  MinimaxEndgameSolver: ${typeof MinimaxEndgameSolver !== 'undefined' ? 'LOADED' : 'MISSING!'}`);
+        log(`  MinimaxTrainingStrategy: ${typeof MinimaxTrainingStrategy !== 'undefined' ? 'LOADED' : 'MISSING!'}`);
+        log(`  MinimaxPolicyUpdater: ${typeof MinimaxPolicyUpdater !== 'undefined' ? 'LOADED' : 'MISSING!'}`);
+        log('='.repeat(80));
+        log('');
+
+        // Initial message
+        log('Minimax Endgame Training Ready');
+        log('Configure settings and click "Start Training"');
+        log('');
+        log('Training strategy:');
+        log('  • Opening: Random moves (exploration)');
+        log('  • Endgame: Perfect minimax play (optimal examples)');
+        log('  • Result: Policy learns from perfect endgames!');
+    </script>
+</body>
+</html>

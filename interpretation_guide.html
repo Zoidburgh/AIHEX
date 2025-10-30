@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>How to Interpret Your Policy Analysis</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        h1 { color: #00ff00; text-align: center; }
+        h2 { color: #00ff00; margin-top: 30px; border-bottom: 2px solid #00ff00; padding-bottom: 10px; }
+        .metric-card {
+            background: #2a2a2a;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        .metric-name {
+            color: #00ff00;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .what-it-means {
+            color: #00ccff;
+            margin: 10px 0;
+            padding-left: 15px;
+        }
+        .good-range {
+            background: #003300;
+            border-left: 4px solid #00ff00;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .bad-range {
+            background: #330000;
+            border-left: 4px solid #ff0000;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .example {
+            background: #1a1a2e;
+            border: 1px solid #ffff00;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+        .example-title {
+            color: #ffff00;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .interpretation {
+            color: #ffffff;
+            margin: 10px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #00ff00;
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background: #00ff00;
+            color: #1a1a1a;
+            font-weight: bold;
+        }
+        .good { color: #00ff00; }
+        .bad { color: #ff0000; }
+        .neutral { color: #ffff00; }
+        code {
+            background: #000;
+            color: #00ff00;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>📊 Policy Analysis Interpretation Guide</h1>
+    <p style="text-align: center; color: #00ccff; font-size: 16px;">
+        Understanding what your AI learned and how good it is
+    </p>
+
+    <h2>1. Overall Statistics</h2>
+
+    <div class="metric-card">
+        <div class="metric-name">Total Games Played</div>
+        <div class="what-it-means">
+            <strong>What it is:</strong> How many games the policy learned from
+        </div>
+        <div class="good-range">
+            <strong class="good">✓ GOOD:</strong> 5,000+ games<br>
+            More games = more experience = smarter AI
+        </div>
+        <div class="bad-range">
+            <strong class="bad">✗ BAD:</strong> Less than 1,000 games<br>
+            Not enough data to learn meaningful strategies
+        </div>
+        <div class="example">
+            <div class="example-title">Example:</div>
+            <div class="interpretation">
+                <code>totalGamesPlayed: 25000</code><br>
+                → <strong class="good">Excellent!</strong> Your AI has seen 25,000 games worth of experience.
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-name">Unique Positions</div>
+        <div class="what-it-means">
+            <strong>What it is:</strong> How many different board states the AI encountered
+        </div>
+        <div class="good-range">
+            <strong class="good">✓ GOOD:</strong> 1,000+ positions<br>
+            More variety = better generalization
+        </div>
+        <div class="interpretation" style="color: #ffffff; margin: 10px 0;">
+            <strong>Note:</strong> Hexuki has astronomically many possible positions, so you'll never see them all.
+            The AI learns patterns that apply to similar positions.
+        </div>
+    </div>
+
+    <h2>2. Learning Quality Metrics</h2>
+
+    <div class="metric-card">
+        <div class="metric-name">Average Plays per Move</div>
+        <div class="what-it-means">
+            <strong>What it is:</strong> On average, how many times each move was tried
+        </div>
+        <div class="good-range">
+            <strong class="good">✓ GOOD:</strong> 5.0 or higher<br>
+            Each move tried enough times to trust the statistics
+        </div>
+        <div class="bad-range">
+            <strong class="bad">✗ BAD:</strong> Less than 3.0<br>
+            Moves not explored enough, data unreliable
+        </div>
+        <div class="example">
+            <div class="example-title">Example:</div>
+            <div class="interpretation">
+                <code>Average Plays per Move: 8.24</code><br>
+                → <strong class="good">Good!</strong> Each move tried ~8 times on average. Statistics are reliable.
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-name">Under-explored Moves (< 5 plays)</div>
+        <div class="what-it-means">
+            <strong>What it is:</strong> Percentage of moves tried less than 5 times
+        </div>
+        <div class="good-range">
+            <strong class="good">✓ GOOD:</strong> Less than 50%<br>
+            Most moves have enough data to learn from
+        </div>
+        <div class="bad-range">
+            <strong class="bad">✗ BAD:</strong> More than 70%<br>
+            Too many moves barely explored, policy is still mostly guessing
+        </div>
+        <div class="example">
+            <div class="example-title">Example:</div>
+            <div class="interpretation">
+                <code>Under-explored Moves: 823 (32.4%)</code><br>
+                → <strong class="good">Good!</strong> About 1/3 of moves are under-explored, but 2/3 have solid data.
+            </div>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-name">Moves with Clear Signal (>60% or <40% win rate)</div>
+        <div class="what-it-means">
+            <strong>What it is:</strong> Percentage of moves that are clearly good (>60% wins) or clearly bad (<40% wins)
+        </div>
+        <div class="good-range">
+            <strong class="good">✓ EXCELLENT:</strong> 40%+ have clear signals<br>
+            <strong class="good">✓ GOOD:</strong> 20-40% have clear signals<br>
+            AI has learned which moves are strong and which are weak
+        </div>
+        <div class="bad-range">
+            <strong class="bad">✗ BAD:</strong> Less than 10% have clear signals<br>
+            AI hasn't discovered clear good/bad moves yet
+        </div>
+        <div class="example">
+            <div class="example-title">Example:</div>
+            <div class="interpretation">
+                <code>Moves with Clear Signal: 891 (35.1%)</code><br>
+                → <strong class="good">Good!</strong> The AI knows 35% of its moves are clearly good or bad. It's learned real strategy!
+            </div>
+        </div>
+        <div class="interpretation" style="color: #ffffff; margin: 15px 0;">
+            <strong>Why this matters:</strong> In complex games, many moves are "okay" (45-55% win rate).
+            Finding moves that are clearly better or worse means real learning happened, not just random noise.
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-name">High Confidence Moves (≥10 plays + clear signal)</div>
+        <div class="what-it-means">
+            <strong>What it is:</strong> Moves tried 10+ times that also have clear win/loss patterns
+        </div>
+        <div class="good-range">
+            <strong class="good">✓ EXCELLENT:</strong> 20%+ are high confidence<br>
+            <strong class="good">✓ GOOD:</strong> 10-20% are high confidence<br>
+            These are your AI's "core knowledge" - moves it really understands
+        </div>
+        <div class="example">
+            <div class="example-title">Example:</div>
+            <div class="interpretation">
+                <code>High Confidence Moves: 456 (18.0%)</code><br>
+                → <strong class="good">Good!</strong> The AI has solid, well-tested knowledge about 18% of moves.
+            </div>
+        </div>
+    </div>
+
+    <h2>3. Win Rate Distribution</h2>
+
+    <div class="metric-card">
+        <div class="metric-name">What the Graph Shows</div>
+        <div class="what-it-means">
+            The bar graph shows how many moves fall into each win rate range (0-10%, 10-20%, etc.)
+        </div>
+
+        <table>
+            <tr>
+                <th>Pattern</th>
+                <th>What It Means</th>
+                <th>Interpretation</th>
+            </tr>
+            <tr>
+                <td><strong>U-Shape</strong><br>(High bars at 0-10% and 90-100%)</td>
+                <td class="good">EXCELLENT!</td>
+                <td>AI has learned clear good/bad moves. Lots of moves it knows to avoid (0-10%) and lots it knows are strong (90-100%)</td>
+            </tr>
+            <tr>
+                <td><strong>Bell Curve</strong><br>(Highest bar at 40-60%)</td>
+                <td class="neutral">OKAY</td>
+                <td>Most moves are "meh" - around 50% win rate. AI hasn't found clear patterns yet. Needs more training.</td>
+            </tr>
+            <tr>
+                <td><strong>Flat</strong><br>(All bars similar height)</td>
+                <td class="bad">BAD</td>
+                <td>No clear patterns. Win rates are random. AI hasn't learned anything yet.</td>
+            </tr>
+            <tr>
+                <td><strong>Bimodal</strong><br>(Two peaks, e.g., at 30% and 70%)</td>
+                <td class="good">GOOD</td>
+                <td>AI is learning position-dependent strategy. Some positions favor certain moves (70%), others don't (30%).</td>
+            </tr>
+        </table>
+
+        <div class="example">
+            <div class="example-title">Good Example (U-Shape):</div>
+            <pre style="color: #00ff00;">
+0-10%:   ████████████████████████ (450 moves) ← Knows these are BAD
+10-20%:  ████ (80 moves)
+20-30%:  ██ (40 moves)
+30-40%:  ██ (35 moves)
+40-50%:  ███ (60 moves)          ← Few "meh" moves
+50-60%:  ███ (55 moves)
+60-70%:  ██ (40 moves)
+70-80%:  ████ (75 moves)
+80-90%:  █████ (95 moves)
+90-100%: ████████████████████ (380 moves) ← Knows these are GOOD
+            </pre>
+            <div class="interpretation">
+                → <strong class="good">Excellent!</strong> Clear U-shape. AI knows 450 moves are terrible and 380 are great!
+            </div>
+        </div>
+
+        <div class="example">
+            <div class="example-title">Bad Example (Bell Curve):</div>
+            <pre style="color: #ff9900;">
+0-10%:   ██ (40 moves)
+10-20%:  ████ (80 moves)
+20-30%:  ████████ (160 moves)
+30-40%:  ██████████████ (280 moves)
+40-50%:  ████████████████████ (400 moves) ← Too many "meh" moves
+50-60%:  ████████████████████ (395 moves)
+60-70%:  ██████████████ (275 moves)
+70-80%:  ████████ (155 moves)
+80-90%:  ████ (75 moves)
+90-100%: ██ (35 moves)
+            </pre>
+            <div class="interpretation">
+                → <strong class="bad">Needs more training!</strong> Most moves cluster around 50%. AI is still guessing.
+            </div>
+        </div>
+    </div>
+
+    <h2>4. Best and Worst Moves Tables</h2>
+
+    <div class="metric-card">
+        <div class="metric-name">How to Read These Tables</div>
+
+        <div class="example">
+            <div class="example-title">Example Best Move:</div>
+            <pre style="color: #00ff00;">
+Move: t7h11
+Win Rate: 92.3%
+Games: 23
+W/L/T: 21.2 / 1.8 / 0.0
+            </pre>
+            <div class="interpretation">
+                <strong>Translation:</strong><br>
+                • <code>t7h11</code> = Playing tile 7 on hex 11<br>
+                • Tried 23 times, won 92.3% of the time<br>
+                • <code>21.2 / 1.8 / 0.0</code> = 21.2 weighted wins, 1.8 weighted losses, 0 ties<br>
+                → <strong class="good">This is a STRONG move!</strong> When this position comes up, play tile 7 on hex 11.
+            </div>
+        </div>
+
+        <div class="example">
+            <div class="example-title">Example Worst Move:</div>
+            <pre style="color: #ff0000;">
+Move: t9h4
+Win Rate: 8.5%
+Games: 18
+W/L/T: 1.5 / 16.3 / 0.2
+            </pre>
+            <div class="interpretation">
+                <strong>Translation:</strong><br>
+                • Playing tile 9 on hex 4<br>
+                • Tried 18 times, only won 8.5% of the time<br>
+                → <strong class="bad">This is a TERRIBLE move!</strong> AI learned to avoid this.
+            </div>
+        </div>
+
+        <div class="interpretation" style="color: #ffffff; margin: 15px 0;">
+            <strong>Important:</strong> These are specific to certain positions!
+            The same move (like t7h11) might be great in one position but terrible in another.
+            The AI learns context-dependent strategy.
+        </div>
+    </div>
+
+    <h2>5. Quick Health Check</h2>
+
+    <div class="metric-card">
+        <div class="metric-name">Is My Policy Any Good?</div>
+
+        <table>
+            <tr>
+                <th>Metric</th>
+                <th>Your Value</th>
+                <th>Target</th>
+                <th>Status</th>
+            </tr>
+            <tr>
+                <td>Total Games</td>
+                <td><input type="text" id="input1" placeholder="e.g., 25000" style="width: 100px;"></td>
+                <td>> 5000</td>
+                <td id="status1">-</td>
+            </tr>
+            <tr>
+                <td>Avg Plays/Move</td>
+                <td><input type="text" id="input2" placeholder="e.g., 8.2" style="width: 100px;"></td>
+                <td>> 5.0</td>
+                <td id="status2">-</td>
+            </tr>
+            <tr>
+                <td>Under-explored %</td>
+                <td><input type="text" id="input3" placeholder="e.g., 32.4" style="width: 100px;"></td>
+                <td>< 50%</td>
+                <td id="status3">-</td>
+            </tr>
+            <tr>
+                <td>Clear Signal %</td>
+                <td><input type="text" id="input4" placeholder="e.g., 35.1" style="width: 100px;"></td>
+                <td>> 20%</td>
+                <td id="status4">-</td>
+            </tr>
+            <tr>
+                <td>High Confidence %</td>
+                <td><input type="text" id="input5" placeholder="e.g., 18.0" style="width: 100px;"></td>
+                <td>> 10%</td>
+                <td id="status5">-</td>
+            </tr>
+        </table>
+
+        <button onclick="checkHealth()" style="background: #00ff00; color: #1a1a1a; border: none; padding: 15px 30px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; margin: 20px 0;">
+            Check Policy Health
+        </button>
+
+        <div id="verdict" style="font-size: 20px; font-weight: bold; padding: 20px; border-radius: 5px; margin: 20px 0; text-align: center; display: none;"></div>
+    </div>
+
+    <h2>6. Next Steps Based on Results</h2>
+
+    <div class="metric-card">
+        <div class="metric-name">If Your Policy Looks GOOD:</div>
+        <ol style="color: #00ff00; font-size: 16px;">
+            <li>Test it against random play in <code>evaluate_policy.html</code></li>
+            <li>Expect 60-80% win rate against random</li>
+            <li>Continue training (import policy, run 5-10 more generations)</li>
+            <li>Save this policy as a milestone!</li>
+        </ol>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-name">If Your Policy Looks BAD:</div>
+        <ol style="color: #ff9900; font-size: 16px;">
+            <li>Train more generations (need more data)</li>
+            <li>Check if exploration rate was too high (try 0.1-0.3)</li>
+            <li>Make sure you imported previous policy to continue learning</li>
+            <li>If still bad after 20K+ games, there might be a bug</li>
+        </ol>
+    </div>
+
+    <script>
+        function checkHealth() {
+            const games = parseFloat(document.getElementById('input1').value);
+            const avgPlays = parseFloat(document.getElementById('input2').value);
+            const underExplored = parseFloat(document.getElementById('input3').value);
+            const clearSignal = parseFloat(document.getElementById('input4').value);
+            const highConf = parseFloat(document.getElementById('input5').value);
+
+            let score = 0;
+            let maxScore = 5;
+
+            // Check each metric
+            if (games > 5000) {
+                document.getElementById('status1').innerHTML = '<span class="good">✓ Good</span>';
+                score++;
+            } else {
+                document.getElementById('status1').innerHTML = '<span class="bad">✗ Low</span>';
+            }
+
+            if (avgPlays > 5.0) {
+                document.getElementById('status2').innerHTML = '<span class="good">✓ Good</span>';
+                score++;
+            } else {
+                document.getElementById('status2').innerHTML = '<span class="bad">✗ Low</span>';
+            }
+
+            if (underExplored < 50) {
+                document.getElementById('status3').innerHTML = '<span class="good">✓ Good</span>';
+                score++;
+            } else {
+                document.getElementById('status3').innerHTML = '<span class="bad">✗ High</span>';
+            }
+
+            if (clearSignal > 20) {
+                document.getElementById('status4').innerHTML = '<span class="good">✓ Good</span>';
+                score++;
+            } else {
+                document.getElementById('status4').innerHTML = '<span class="bad">✗ Low</span>';
+            }
+
+            if (highConf > 10) {
+                document.getElementById('status5').innerHTML = '<span class="good">✓ Good</span>';
+                score++;
+            } else {
+                document.getElementById('status5').innerHTML = '<span class="bad">✗ Low</span>';
+            }
+
+            // Show verdict
+            const verdictDiv = document.getElementById('verdict');
+            verdictDiv.style.display = 'block';
+
+            if (score === 5) {
+                verdictDiv.style.background = '#00ff00';
+                verdictDiv.style.color = '#1a1a1a';
+                verdictDiv.innerHTML = '🏆 EXCELLENT! Your policy looks very strong!<br>Proceed to evaluation against random play.';
+            } else if (score >= 3) {
+                verdictDiv.style.background = '#ffff00';
+                verdictDiv.style.color = '#1a1a1a';
+                verdictDiv.innerHTML = '👍 DECENT! Your policy shows learning.<br>Continue training to improve weak areas.';
+            } else {
+                verdictDiv.style.background = '#ff0000';
+                verdictDiv.style.color = '#ffffff';
+                verdictDiv.innerHTML = '❌ NEEDS WORK! Your policy needs more training.<br>Run more generations and check settings.';
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Chain Constraint</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+        }
+        #output {
+            background: #000;
+            padding: 15px;
+            white-space: pre-wrap;
+        }
+        .violation { color: #ff0000; }
+        .ok { color: #00ff00; }
+    </style>
+</head>
+<body>
+    <h1>Chain Constraint Test</h1>
+    <div id="output"></div>
+
+    <script src="hexuki_game_engine.js"></script>
+    <script>
+        const output = document.getElementById('output');
+
+        function log(msg, isViolation = false) {
+            const div = document.createElement('div');
+            div.className = isViolation ? 'violation' : 'ok';
+            div.textContent = msg;
+            output.appendChild(div);
+        }
+
+        const game = new HexukiGameEngine();
+
+        log('=== INITIAL STATE ===');
+        log('Center hex 9 has value: ' + game.board[9].value);
+
+        const initialChains = game.calculateChainLengths(1);
+        initialChains.sort((a, b) => b - a);
+        log('Chain lengths: [' + initialChains.join(', ') + ']');
+        log('Longest: ' + initialChains[0] + ', Second: ' + initialChains[1]);
+        log('');
+
+        // Get neighbors of center
+        const centerNeighbors = game.getAdjacentHexes(9);
+        log('Center hex 9 neighbors: [' + centerNeighbors.join(', ') + ']');
+        log('');
+
+        // Try to place on hex 6 (on same diagonal as center)
+        // Chain [3,6,9,12,15] contains both 6 and 9
+        log('=== TESTING MOVE 1: Place tile 5 on hex 6 (same diagonal as center) ===');
+        log('Chain [3,6,9,12,15] contains both hex 6 and hex 9');
+        log('');
+
+        // Check if legal BEFORE making move
+        const isLegal = game.isMoveLegal(6);
+        log('Is move legal? ' + isLegal);
+
+        // Manually check chain constraint
+        const originalValue = game.board[6].value;
+        const originalOwner = game.board[6].owner;
+        game.board[6].value = 5;
+        game.board[6].owner = 'player1';
+
+        const afterChains = game.calculateChainLengths(1);
+        afterChains.sort((a, b) => b - a);
+        log('Chain lengths AFTER placement: [' + afterChains.join(', ') + ']');
+        log('Longest: ' + afterChains[0] + ', Second: ' + afterChains[1]);
+        log('Difference: ' + (afterChains[0] - afterChains[1]));
+
+        const wouldViolate = (afterChains[0] - afterChains[1]) > 1;
+        log('Would violate constraint (diff > 1)? ' + wouldViolate, wouldViolate);
+
+        // Restore
+        game.board[6].value = originalValue;
+        game.board[6].owner = originalOwner;
+
+        log('');
+
+        // Actually make the move
+        log('=== ACTUALLY MAKING MOVE 1 ===');
+        const success = game.makeMove(6, 5);
+        log('Move succeeded? ' + success, !success);
+
+        if (success) {
+            const finalChains = game.calculateChainLengths(2);
+            finalChains.sort((a, b) => b - a);
+            log('Final chain lengths: [' + finalChains.join(', ') + ']');
+            log('Board state:');
+            game.board.forEach((hex, i) => {
+                if (hex.value !== null) {
+                    log('  Hex ' + i + ': value=' + hex.value + ', owner=' + hex.owner);
+                }
+            });
+        }
+
+        log('');
+        log('=== CONCLUSION ===');
+        if (!isLegal) {
+            log('✓ Constraint is working - move correctly blocked', false);
+        } else if (wouldViolate) {
+            log('✗ BUG: Move should have been blocked but was allowed!', true);
+        } else {
+            log('✓ Move allowed correctly (no violation)', false);
+        }
+    </script>
+</body>
+</html>

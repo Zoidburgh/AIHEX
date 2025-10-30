@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Headless vs Real Game Comparison</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 20px;
+        }
+        h1, h2 { color: #00ff00; }
+        .section {
+            background: #2a2a2a;
+            border: 2px solid #00ff00;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        th, td {
+            border: 1px solid #00ff00;
+            padding: 8px;
+            text-align: left;
+        }
+        th { background: #003300; }
+        .match { color: #00ff00; }
+        .mismatch { color: #ff0000; font-weight: bold; }
+        pre { background: #000; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Headless Engine vs Real Game - Detailed Comparison</h1>
+
+    <div class="section">
+        <h2>1. Hex Position Definitions</h2>
+        <div id="hexPositions"></div>
+    </div>
+
+    <div class="section">
+        <h2>2. Scoring Chain Definitions</h2>
+        <div id="chainDefs"></div>
+    </div>
+
+    <div class="section">
+        <h2>3. Chain Geometry Validation</h2>
+        <div id="chainGeometry"></div>
+    </div>
+
+    <div class="section">
+        <h2>4. Conclusion</h2>
+        <div id="conclusion"></div>
+    </div>
+
+    <script src="hexuki_game_engine.js"></script>
+    <script>
+        // Real game hex positions (from hexuki_ANTISYMMETRY_TEST.html line 2315-2333)
+        const realGamePositions = [
+            {id: 0, row: 0, col: 2},
+            {id: 1, row: 1, col: 1},
+            {id: 2, row: 1, col: 3},
+            {id: 3, row: 2, col: 0},
+            {id: 4, row: 2, col: 2},
+            {id: 5, row: 2, col: 4},
+            {id: 6, row: 3, col: 1},
+            {id: 7, row: 3, col: 3},
+            {id: 8, row: 4, col: 0},
+            {id: 9, row: 4, col: 2},
+            {id: 10, row: 4, col: 4},
+            {id: 11, row: 5, col: 1},
+            {id: 12, row: 5, col: 3},
+            {id: 13, row: 6, col: 0},
+            {id: 14, row: 6, col: 2},
+            {id: 15, row: 6, col: 4},
+            {id: 16, row: 7, col: 1},
+            {id: 17, row: 7, col: 3},
+            {id: 18, row: 8, col: 2}
+        ];
+
+        // Real game chain definitions (from hexuki_ANTISYMMETRY_TEST.html line 4319-4333)
+        const realGameP1Chains = [
+            [0, 2, 5],
+            [1, 4, 7, 10],
+            [3, 6, 9, 12, 15],
+            [8, 11, 14, 17],
+            [13, 16, 18]
+        ];
+
+        const realGameP2Chains = [
+            [0, 1, 3],
+            [2, 4, 6, 8],
+            [5, 7, 9, 11, 13],
+            [12, 14, 16, 10],
+            [15, 17, 18]
+        ];
+
+        // Headless engine
+        const engine = new HexukiGameEngine();
+        const headlessPositions = engine.board.map(h => ({id: h.id, row: h.row, col: h.col}));
+        const headlessP1Chains = engine.player1Chains;
+        const headlessP2Chains = engine.player2Chains;
+
+        // Compare hex positions
+        let hexPosHTML = '<table><tr><th>Hex ID</th><th>Real Game</th><th>Headless</th><th>Status</th></tr>';
+        let hexMismatches = 0;
+        for (let i = 0; i < 19; i++) {
+            const real = realGamePositions[i];
+            const headless = headlessPositions[i];
+            const match = real.row === headless.row && real.col === headless.col;
+            if (!match) hexMismatches++;
+
+            hexPosHTML += `<tr>
+                <td>${i}</td>
+                <td>(${real.row}, ${real.col})</td>
+                <td>(${headless.row}, ${headless.col})</td>
+                <td class="${match ? 'match' : 'mismatch'}">${match ? '✓ MATCH' : '✗ MISMATCH'}</td>
+            </tr>`;
+        }
+        hexPosHTML += '</table>';
+        document.getElementById('hexPositions').innerHTML = hexPosHTML;
+
+        // Compare chain definitions
+        let chainHTML = '<h3>Player 1 Chains:</h3><table><tr><th>Chain #</th><th>Real Game</th><th>Headless</th><th>Status</th></tr>';
+        let p1ChainMismatches = 0;
+        for (let i = 0; i < 5; i++) {
+            const real = JSON.stringify(realGameP1Chains[i]);
+            const headless = JSON.stringify(headlessP1Chains[i]);
+            const match = real === headless;
+            if (!match) p1ChainMismatches++;
+
+            chainHTML += `<tr>
+                <td>${i + 1}</td>
+                <td>${real}</td>
+                <td>${headless}</td>
+                <td class="${match ? 'match' : 'mismatch'}">${match ? '✓ MATCH' : '✗ MISMATCH'}</td>
+            </tr>`;
+        }
+        chainHTML += '</table>';
+
+        chainHTML += '<h3>Player 2 Chains:</h3><table><tr><th>Chain #</th><th>Real Game</th><th>Headless</th><th>Status</th></tr>';
+        let p2ChainMismatches = 0;
+        for (let i = 0; i < 5; i++) {
+            const real = JSON.stringify(realGameP2Chains[i]);
+            const headless = JSON.stringify(headlessP2Chains[i]);
+            const match = real === headless;
+            if (!match) p2ChainMismatches++;
+
+            chainHTML += `<tr>
+                <td>${i + 1}</td>
+                <td>${real}</td>
+                <td>${headless}</td>
+                <td class="${match ? 'match' : 'mismatch'}">${match ? '✓ MATCH' : '✗ MISMATCH'}</td>
+            </tr>`;
+        }
+        chainHTML += '</table>';
+        document.getElementById('chainDefs').innerHTML = chainHTML;
+
+        // Validate chain geometry
+        function isValidDiagonal(chain, positions) {
+            if (chain.length < 2) return {valid: true, reason: 'Chain too short to validate'};
+
+            const hexes = chain.map(id => positions.find(p => p.id === id));
+            const dr0 = hexes[1].row - hexes[0].row;
+            const dc0 = hexes[1].col - hexes[0].col;
+
+            for (let i = 2; i < hexes.length; i++) {
+                const dr = hexes[i].row - hexes[i-1].row;
+                const dc = hexes[i].col - hexes[i-1].col;
+
+                if (dr !== dr0 || dc !== dc0) {
+                    return {
+                        valid: false,
+                        reason: `Step ${i-1}→${i}: (Δr=${dr}, Δc=${dc}) != initial step (Δr=${dr0}, Δc=${dc0})`
+                    };
+                }
+            }
+
+            return {valid: true, reason: `Consistent diagonal: Δr=${dr0}, Δc=${dc0}`};
+        }
+
+        let geomHTML = '<h3>Real Game Chains:</h3>';
+        geomHTML += '<h4>Player 1:</h4><pre>';
+        realGameP1Chains.forEach((chain, idx) => {
+            const validation = isValidDiagonal(chain, realGamePositions);
+            geomHTML += `Chain ${idx + 1} ${JSON.stringify(chain)}: ${validation.valid ? '✓' : '✗'} ${validation.reason}\n`;
+        });
+        geomHTML += '</pre>';
+
+        geomHTML += '<h4>Player 2:</h4><pre>';
+        realGameP2Chains.forEach((chain, idx) => {
+            const validation = isValidDiagonal(chain, realGamePositions);
+            geomHTML += `Chain ${idx + 1} ${JSON.stringify(chain)}: ${validation.valid ? '✓' : '✗'} ${validation.reason}\n`;
+        });
+        geomHTML += '</pre>';
+
+        geomHTML += '<h3>Headless Engine Chains:</h3>';
+        geomHTML += '<h4>Player 1:</h4><pre>';
+        headlessP1Chains.forEach((chain, idx) => {
+            const validation = isValidDiagonal(chain, headlessPositions);
+            geomHTML += `Chain ${idx + 1} ${JSON.stringify(chain)}: ${validation.valid ? '✓' : '✗'} ${validation.reason}\n`;
+        });
+        geomHTML += '</pre>';
+
+        geomHTML += '<h4>Player 2:</h4><pre>';
+        headlessP2Chains.forEach((chain, idx) => {
+            const validation = isValidDiagonal(chain, headlessPositions);
+            geomHTML += `Chain ${idx + 1} ${JSON.stringify(chain)}: ${validation.valid ? '✓' : '✗'} ${validation.reason}\n`;
+        });
+        geomHTML += '</pre>';
+
+        document.getElementById('chainGeometry').innerHTML = geomHTML;
+
+        // Conclusion
+        let conclusionHTML = '<h3>Summary:</h3><ul>';
+        conclusionHTML += `<li>Hex Position Mismatches: <span class="${hexMismatches === 0 ? 'match' : 'mismatch'}">${hexMismatches}</span></li>`;
+        conclusionHTML += `<li>P1 Chain Definition Mismatches: <span class="${p1ChainMismatches === 0 ? 'match' : 'mismatch'}">${p1ChainMismatches}</span></li>`;
+        conclusionHTML += `<li>P2 Chain Definition Mismatches: <span class="${p2ChainMismatches === 0 ? 'match' : 'mismatch'}">${p2ChainMismatches}</span></li>`;
+        conclusionHTML += '</ul>';
+
+        if (hexMismatches === 0 && p1ChainMismatches === 0 && p2ChainMismatches === 0) {
+            conclusionHTML += '<h3 class="match">✅ HEADLESS ENGINE MATCHES REAL GAME PERFECTLY</h3>';
+            conclusionHTML += '<p>The headless engine has identical hex positions and chain definitions as the real game.</p>';
+        } else {
+            conclusionHTML += '<h3 class="mismatch">❌ DISCREPANCIES FOUND</h3>';
+            conclusionHTML += '<p>The headless engine has differences that need to be fixed.</p>';
+        }
+
+        document.getElementById('conclusion').innerHTML = conclusionHTML;
+    </script>
+</body>
+</html>

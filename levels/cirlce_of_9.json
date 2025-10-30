@@ -1,0 +1,45 @@
+{
+  "title": "Untitled Puzzle",
+  "description": "",
+  "position": "h5:9,h7:9,h8:9,h12:9,h13:9,h15:9|p1:1,1,1,1,1,1,1,1|p2:2,2,2,2,2,2,2|turn:1",
+  "board": [
+    null,
+    null,
+    null,
+    null,
+    9,
+    null,
+    9,
+    9,
+    null,
+    null,
+    null,
+    9,
+    9,
+    null,
+    9,
+    null,
+    null,
+    null,
+    null
+  ],
+  "p1Tiles": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "p2Tiles": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6
+  ],
+  "startingPlayer": 1,
+  "exportedAt": "2025-10-27T08:29:05.304Z"
+}

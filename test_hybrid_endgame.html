@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HEXUKI - Hybrid AI Test (MCTS + Minimax)</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #00ff00;
+        }
+
+        h1 {
+            text-align: center;
+            color: #00ff00;
+            text-shadow: 0 0 10px #00ff00;
+        }
+
+        .test-section {
+            background: #0a0a0a;
+            border: 2px solid #00ff00;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+
+        button {
+            background: #00ff00;
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #00cc00;
+            box-shadow: 0 0 20px #00ff00;
+        }
+
+        button:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        pre {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            color: #00ff00;
+            max-height: 500px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .perfect { color: #ffff00; font-weight: bold; }
+        .mcts { color: #00aaff; }
+        .good { color: #00ff00; }
+        .progress {
+            color: #ffff00;
+            margin: 10px 0;
+            display: none;
+        }
+        .progress.active { display: block; }
+    </style>
+</head>
+<body>
+    <h1>🧠 HEXUKI Hybrid AI Test</h1>
+    <p style="text-align: center; color: #00ff00;">
+        MCTS for opening/midgame + Perfect Minimax for endgame
+    </p>
+
+    <div class="test-section">
+        <h2>Test 1: Minimax Endgame Solver</h2>
+        <p>Test perfect endgame play with 6 tiles remaining</p>
+
+        <button onclick="testMinimaxEndgame()" id="btn1">
+            Test Minimax Solver (6 tiles)
+        </button>
+
+        <div id="progress1" class="progress"></div>
+        <pre id="output1"></pre>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 2: Hybrid AI Full Game</h2>
+        <p>Watch AI switch from MCTS to Minimax during game</p>
+
+        <button onclick="testHybridGame()" id="btn2">
+            Play Hybrid AI Game
+        </button>
+
+        <div id="progress2" class="progress"></div>
+        <pre id="output2"></pre>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 3: Pure MCTS vs Hybrid AI</h2>
+        <p>Compare pure MCTS (500 sims) vs Hybrid (500 MCTS + Minimax endgame)</p>
+
+        <button onclick="testMCTSvsHybrid()" id="btn3">
+            MCTS vs Hybrid (3 games)
+        </button>
+
+        <div id="progress3" class="progress"></div>
+        <pre id="output3"></pre>
+    </div>
+
+    <div class="test-section">
+        <h2>Test 4: Performance Benchmark</h2>
+        <p>Measure speed of minimax solver at different depths</p>
+
+        <button onclick="benchmarkMinimax()" id="btn4">
+            Benchmark Minimax
+        </button>
+
+        <div id="progress4" class="progress"></div>
+        <pre id="output4"></pre>
+    </div>
+
+    <script src="hexuki_game_engine_v2.js"></script>
+    <script src="mcts_ai_player.js"></script>
+    <script src="minimax_endgame_solver.js"></script>
+
+    <script>
+        function setProgress(id, text) {
+            const prog = document.getElementById(`progress${id}`);
+            prog.textContent = text;
+            prog.classList.add('active');
+            document.getElementById(`btn${id}`).disabled = true;
+        }
+
+        function clearProgress(id) {
+            document.getElementById(`progress${id}`).classList.remove('active');
+            document.getElementById(`btn${id}`).disabled = false;
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        async function testMinimaxEndgame() {
+            const output = document.getElementById('output1');
+            output.textContent = '=== Testing Minimax Endgame Solver ===\n\n';
+            setProgress(1, 'Setting up endgame position...');
+            await sleep(100);
+
+            // Create a game with only 6 tiles remaining
+            const game = new HexukiGameEngineV2();
+
+            // Pre-play moves to get to endgame
+            const preMoves = [
+                {hexId: 4, tileValue: 5},   // P1
+                {hexId: 6, tileValue: 4},   // P2
+                {hexId: 7, tileValue: 6},   // P1
+                {hexId: 11, tileValue: 3},  // P2
+                {hexId: 12, tileValue: 7},  // P1
+                {hexId: 14, tileValue: 5},  // P2
+                {hexId: 2, tileValue: 8},   // P1
+                {hexId: 1, tileValue: 6},   // P2
+                {hexId: 16, tileValue: 9},  // P1
+                {hexId: 17, tileValue: 7},  // P2
+                {hexId: 0, tileValue: 4},   // P1
+                {hexId: 18, tileValue: 8}   // P2
+            ];
+
+            for (const move of preMoves) {
+                game.makeMove(move.hexId, move.tileValue);
+            }
+
+            const tilesLeft = game.player1Tiles.length + game.player2Tiles.length;
+            output.textContent += `Tiles remaining: ${tilesLeft}\n`;
+            output.textContent += `P1 tiles: [${game.player1Tiles.join(', ')}]\n`;
+            output.textContent += `P2 tiles: [${game.player2Tiles.join(', ')}]\n`;
+            output.textContent += `Current player: ${game.currentPlayer}\n\n`;
+
+            setProgress(1, 'Running minimax solver...');
+            await sleep(100);
+
+            // Solve with minimax
+            const solver = new MinimaxEndgameSolver(12);
+            const result = solver.getBestMove(game);
+
+            output.textContent += `<span class="perfect">⚡ PERFECT SOLUTION FOUND</span>\n\n`;
+            output.textContent += `Best move: Hex ${result.move.hexId}, Tile ${result.move.tileValue}\n`;
+            output.textContent += `Expected score difference: ${result.stats.score}\n`;
+            output.textContent += `Nodes searched: ${result.stats.nodesSearched.toLocaleString()}\n`;
+            output.textContent += `Cache hits: ${result.stats.cacheHits.toLocaleString()}\n`;
+            output.textContent += `Cache hit rate: ${(result.stats.cacheHits / result.stats.nodesSearched * 100).toFixed(1)}%\n`;
+            output.textContent += `Time: ${result.stats.timeMs}ms\n\n`;
+
+            output.textContent += `Top 5 moves (perfect scores):\n`;
+            result.stats.alternatives.forEach((alt, idx) => {
+                output.textContent += `  ${idx + 1}. Hex ${alt.move.hexId}, Tile ${alt.move.tileValue} → score: ${alt.score}\n`;
+            });
+
+            clearProgress(1);
+        }
+
+        async function testHybridGame() {
+            const output = document.getElementById('output2');
+            output.textContent = '=== Playing Hybrid AI Game ===\n\n';
+            setProgress(2, 'Starting game...');
+            await sleep(100);
+
+            const game = new HexukiGameEngineV2();
+            const hybrid = new HybridAI(500, 8); // 500 MCTS sims, switch to minimax at 8 tiles
+
+            let moveCount = 0;
+
+            while (!game.gameEnded) {
+                moveCount++;
+                const tilesLeft = game.player1Tiles.length + game.player2Tiles.length;
+
+                setProgress(2, `Move ${moveCount}/18 (${tilesLeft} tiles left)...`);
+                await sleep(10);
+
+                const result = hybrid.getBestMove(game);
+
+                if (result.stats.perfect) {
+                    output.textContent += `<span class="perfect">Move ${moveCount} [MINIMAX]: `;
+                } else {
+                    output.textContent += `<span class="mcts">Move ${moveCount} [MCTS]: `;
+                }
+
+                output.textContent += `P${game.currentPlayer} plays Hex ${result.move.hexId}, Tile ${result.move.tileValue}`;
+
+                if (result.stats.perfect) {
+                    output.textContent += ` (score: ${result.stats.score}, ${result.stats.nodesSearched} nodes)</span>\n`;
+                } else {
+                    output.textContent += ` (${(result.stats.winRate * 100).toFixed(1)}% win rate)</span>\n`;
+                }
+
+                game.makeMove(result.move.hexId, result.move.tileValue);
+            }
+
+            const scores = game.calculateScores();
+            output.textContent += `\n=== GAME OVER ===\n`;
+            output.textContent += `Final Score: P1 ${scores.player1} - P2 ${scores.player2}\n`;
+            output.textContent += `Winner: Player ${scores.player1 > scores.player2 ? '1' : '2'}\n`;
+
+            clearProgress(2);
+        }
+
+        async function testMCTSvsHybrid() {
+            const output = document.getElementById('output3');
+            output.textContent = '=== MCTS (500 sims) vs Hybrid (500 MCTS + Minimax) ===\n\n';
+            setProgress(3, 'Running games...');
+
+            let mctsWins = 0, hybridWins = 0, draws = 0;
+
+            for (let gameNum = 1; gameNum <= 3; gameNum++) {
+                output.textContent += `\nGame ${gameNum}:\n`;
+                await sleep(50);
+
+                const game = new HexukiGameEngineV2();
+                const pureMMCTS = new MCTSPlayer(500);
+                const hybrid = new HybridAI(500, 8);
+
+                while (!game.gameEnded) {
+                    const ai = game.currentPlayer === 1 ? pureMMCTS : hybrid;
+                    const result = ai.getBestMove(game);
+                    game.makeMove(result.move.hexId, result.move.tileValue);
+
+                    setProgress(3, `Game ${gameNum}, Move ${game.moveCount}/18...`);
+                }
+
+                const scores = game.calculateScores();
+                const winner = scores.player1 > scores.player2 ? 1 :
+                              scores.player2 > scores.player1 ? 2 : 0;
+
+                output.textContent += `  P1 (Pure MCTS): ${scores.player1}\n`;
+                output.textContent += `  P2 (Hybrid): ${scores.player2}\n`;
+                output.textContent += `  Winner: ${winner === 0 ? 'DRAW' : 'Player ' + winner}\n`;
+
+                if (winner === 1) mctsWins++;
+                else if (winner === 2) hybridWins++;
+                else draws++;
+            }
+
+            output.textContent += `\n=== RESULTS ===\n`;
+            output.textContent += `Pure MCTS wins: ${mctsWins}\n`;
+            output.textContent += `Hybrid wins: ${hybridWins}\n`;
+            output.textContent += `Draws: ${draws}\n\n`;
+
+            if (hybridWins > mctsWins) {
+                output.textContent += `<span class="good">✓ Hybrid AI with minimax endgame is stronger!</span>\n`;
+            } else if (mctsWins > hybridWins) {
+                output.textContent += `Pure MCTS won more (may need more games to see advantage)\n`;
+            } else {
+                output.textContent += `Tied (run more games for conclusive results)\n`;
+            }
+
+            clearProgress(3);
+        }
+
+        async function benchmarkMinimax() {
+            const output = document.getElementById('output4');
+            output.textContent = '=== Minimax Performance Benchmark ===\n\n';
+            setProgress(4, 'Creating test positions...');
+            await sleep(100);
+
+            const solver = new MinimaxEndgameSolver(12);
+
+            // Test at different depths
+            const testCases = [
+                {tiles: 2, description: '2 tiles (trivial)'},
+                {tiles: 4, description: '4 tiles (easy)'},
+                {tiles: 6, description: '6 tiles (medium)'},
+                {tiles: 8, description: '8 tiles (hard)'}
+            ];
+
+            for (const testCase of testCases) {
+                output.textContent += `\nTesting: ${testCase.description}\n`;
+                setProgress(4, `Testing ${testCase.description}...`);
+                await sleep(50);
+
+                // Create position with specified tiles remaining
+                const game = createPositionWithTilesRemaining(testCase.tiles);
+
+                const startTime = performance.now();
+                const result = solver.getBestMove(game);
+                const elapsed = performance.now() - startTime;
+
+                output.textContent += `  Time: ${elapsed.toFixed(0)}ms\n`;
+                output.textContent += `  Nodes: ${result.stats.nodesSearched.toLocaleString()}\n`;
+                output.textContent += `  Nodes/sec: ${(result.stats.nodesSearched / (elapsed / 1000)).toFixed(0)}\n`;
+                output.textContent += `  Cache hit rate: ${(result.stats.cacheHits / result.stats.nodesSearched * 100).toFixed(1)}%\n`;
+
+                solver.clearCache();
+            }
+
+            output.textContent += `\n<span class="good">✓ Benchmark complete!</span>\n`;
+            output.textContent += `\nRecommendation: Use minimax threshold of 6-8 tiles for best performance.\n`;
+
+            clearProgress(4);
+        }
+
+        function createPositionWithTilesRemaining(tilesRemaining) {
+            const game = new HexukiGameEngineV2();
+
+            // Play random moves until desired tiles remain
+            const movesToPlay = 18 - tilesRemaining;
+            let movesPlayed = 0;
+
+            while (movesPlayed < movesToPlay) {
+                const moves = game.getAllValidMoves();
+                if (moves.length === 0) break;
+
+                const randomMove = moves[Math.floor(Math.random() * moves.length)];
+                game.makeMove(randomMove.hexId, randomMove.tileValue);
+                movesPlayed++;
+            }
+
+            return game;
+        }
+    </script>
+</body>
+</html>

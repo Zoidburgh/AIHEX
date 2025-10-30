@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>HEXUKI Opening Sequence Analyzer</title>
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: #eee;
+        }
+
+        h1 {
+            text-align: center;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #aaa;
+            margin-bottom: 30px;
+        }
+
+        .layer-section {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid rgba(102, 126, 234, 0.3);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .layer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(102, 126, 234, 0.5);
+        }
+
+        .layer-title {
+            font-size: 1.8em;
+            color: #667eea;
+        }
+
+        .layer-status {
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+            margin: 5px;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        .opening-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .opening-card {
+            background: rgba(0,0,0,0.3);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            transition: all 0.3s;
+        }
+
+        .opening-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .opening-card.rank-1 { border-color: gold; border-width: 2px; }
+        .opening-card.rank-2 { border-color: silver; border-width: 2px; }
+        .opening-card.rank-3 { border-color: #cd7f32; border-width: 2px; }
+
+        .sequence-tree {
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .tree-node {
+            margin-left: 20px;
+            padding: 8px;
+            border-left: 2px solid rgba(102, 126, 234, 0.3);
+        }
+
+        .tree-node:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .progress-section {
+            background: rgba(0,0,0,0.4);
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .progress-section.active {
+            display: block;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+
+        .stat-box {
+            background: rgba(0,0,0,0.4);
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-label {
+            color: #aaa;
+            font-size: 11px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .file-upload {
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px dashed rgba(102, 126, 234, 0.5);
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .log {
+            background: rgba(0,0,0,0.5);
+            padding: 15px;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            margin-top: 15px;
+        }
+
+        .log-entry {
+            padding: 3px 0;
+            color: #0f0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        th {
+            background: rgba(0,0,0,0.4);
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        tr:hover {
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .expand-btn {
+            background: none;
+            border: 1px solid #667eea;
+            padding: 4px 12px;
+            font-size: 12px;
+            margin: 2px;
+        }
+
+        .response-details {
+            display: none;
+            margin-left: 40px;
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(0,0,0,0.3);
+            border-left: 3px solid #667eea;
+        }
+
+        .response-details.open {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>🌳 HEXUKI Opening Sequence Analyzer</h1>
+    <p class="subtitle">Layer-by-Layer Opening Theory Development</p>
+
+    <!-- Layer 1: Import -->
+    <div class="layer-section">
+        <div class="layer-header">
+            <div class="layer-title">📁 Layer 1: Load Opening Book</div>
+            <div class="layer-status" id="layer1Status">Not loaded</div>
+        </div>
+
+        <div class="file-upload">
+            <p>Upload your opening book JSON (from previous 1000-game analysis):</p>
+            <input type="file" id="fileInput" accept=".json" onchange="loadOpeningBook(event)">
+        </div>
+
+        <div id="layer1Data" style="display:none;">
+            <h3>Top 10 P1 Openings</h3>
+            <div class="opening-list" id="top10List"></div>
+        </div>
+    </div>
+
+    <!-- Layer 2: P2 Responses -->
+    <div class="layer-section">
+        <div class="layer-header">
+            <div class="layer-title">🎯 Layer 2: P2 Best Responses</div>
+            <div class="layer-status" id="layer2Status">Waiting for Layer 1</div>
+        </div>
+
+        <div>
+            <button id="startLayer2Btn" onclick="startLayer2()" disabled>
+                🚀 Start Layer 2 Analysis (~5-6 hours)
+            </button>
+            <button id="pauseLayer2Btn" onclick="pauseLayer2()" disabled>⏸ Pause</button>
+            <button id="stopLayer2Btn" onclick="stopLayer2()" disabled>⏹ Stop</button>
+            <button id="exportLayer2Btn" onclick="exportLayer2()" disabled>💾 Export Layer 2</button>
+        </div>
+
+        <div id="layer2Progress" class="progress-section">
+            <div class="progress-bar">
+                <div id="layer2ProgressFill" class="progress-fill">0%</div>
+            </div>
+
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-label">Sequences Tested</div>
+                    <div class="stat-value" id="layer2Sequences">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Games Played</div>
+                    <div class="stat-value" id="layer2Games">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Current Opening</div>
+                    <div class="stat-value" id="layer2Current">-</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">Est. Time Left</div>
+                    <div class="stat-value" id="layer2TimeLeft">-</div>
+                </div>
+            </div>
+
+            <div class="log" id="layer2Log"></div>
+        </div>
+
+        <div id="layer2Results" style="display:none;">
+            <h3>Layer 2 Complete Results</h3>
+            <div id="layer2Content"></div>
+        </div>
+    </div>
+
+    <script src="hexuki_game_engine_v2.js"></script>
+    <script src="mcts_ai_player.js"></script>
+    <script src="opening_sequence_generator.js"></script>
+
+    <script>
+        let generator = null;
+        let openingBookData = null;
+        let startTime = null;
+
+        function loadOpeningBook(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    openingBookData = JSON.parse(e.target.result);
+
+                    // Create generator
+                    generator = new OpeningSequenceGenerator(1000, 300);
+                    generator.loadLayer1(openingBookData);
+
+                    // Display Layer 1 data
+                    displayLayer1();
+
+                    // Enable Layer 2
+                    document.getElementById('startLayer2Btn').disabled = false;
+                    document.getElementById('layer1Status').textContent =
+                        `✓ Loaded (${openingBookData.metadata.totalGames} games)`;
+                    document.getElementById('layer2Status').textContent = 'Ready to start';
+
+                    log('layer2Log', `Loaded opening book with ${openingBookData.openings.length} openings`, '#0f0');
+                } catch (error) {
+                    alert('Error loading file: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function displayLayer1() {
+            const top10 = openingBookData.openings.slice(0, 10);
+            const listDiv = document.getElementById('top10List');
+
+            listDiv.innerHTML = top10.map((opening, i) => `
+                <div class="opening-card rank-${Math.min(i + 1, 3)}">
+                    <div style="display: flex; justify-content: space-between;">
+                        <strong>Rank ${i + 1}</strong>
+                        <span>${(opening.winRate * 100).toFixed(1)}%</span>
+                    </div>
+                    <div style="font-size: 24px; margin: 10px 0;">
+                        Hex ${opening.hex}, Tile ${opening.tile}
+                    </div>
+                    <div style="color: #aaa; font-size: 14px;">
+                        Avg Score: ${opening.avgScore > 0 ? '+' : ''}${opening.avgScore.toFixed(0)}
+                        | ${opening.games} games
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('layer1Data').style.display = 'block';
+        }
+
+        async function startLayer2() {
+            if (!generator) return;
+
+            document.getElementById('startLayer2Btn').disabled = true;
+            document.getElementById('pauseLayer2Btn').disabled = false;
+            document.getElementById('stopLayer2Btn').disabled = false;
+            document.getElementById('layer2Progress').classList.add('active');
+            document.getElementById('layer2Status').textContent = 'Running...';
+
+            startTime = Date.now();
+
+            // Set up callbacks
+            generator.callbacks.onSequenceComplete = (data) => {
+                updateLayer2Progress(data);
+            };
+
+            generator.callbacks.onLayerComplete = (layer2Data) => {
+                onLayer2Complete(layer2Data);
+            };
+
+            log('layer2Log', 'Starting Layer 2 analysis...', '#0f0');
+            log('layer2Log', `Testing top 10 P1 openings vs all P2 responses`, '#aaa');
+
+            // Start generation
+            await generator.generateLayer2(20);
+        }
+
+        function updateLayer2Progress(data) {
+            const { progress, result } = data;
+
+            // Update stats
+            document.getElementById('layer2Sequences').textContent =
+                `${progress.parentNum * 50 + progress.responseNum} / ~500`;
+            document.getElementById('layer2Games').textContent = progress.totalGames;
+            document.getElementById('layer2Current').textContent =
+                `${progress.parentNum}/${progress.totalParents}`;
+
+            // Update progress bar
+            const totalExpected = 500 * 20; // ~500 sequences × 20 games each
+            const percent = Math.min(100, (progress.totalGames / totalExpected * 100)).toFixed(0);
+            const fill = document.getElementById('layer2ProgressFill');
+            fill.style.width = percent + '%';
+            fill.textContent = percent + '%';
+
+            // Estimate time
+            const elapsed = Date.now() - startTime;
+            const rate = progress.totalGames / (elapsed / 1000);
+            const remaining = (totalExpected - progress.totalGames) / rate;
+            const hours = Math.floor(remaining / 3600);
+            const mins = Math.floor((remaining % 3600) / 60);
+            document.getElementById('layer2TimeLeft').textContent =
+                hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+
+            // Log every 10th sequence
+            if (progress.responseNum % 10 === 0) {
+                log('layer2Log',
+                    `P1 ${data.p1Opening.hex}-${data.p1Opening.tile} vs P2 ${data.p2Response.hexId}-${data.p2Response.tileValue}: ${(result.p1WinRate * 100).toFixed(1)}% P1 win`,
+                    '#0dd');
+            }
+        }
+
+        function onLayer2Complete(layer2Data) {
+            document.getElementById('layer2Status').textContent =
+                `✓ Complete (${layer2Data.totalGames} games)`;
+            document.getElementById('startLayer2Btn').disabled = false;
+            document.getElementById('pauseLayer2Btn').disabled = true;
+            document.getElementById('stopLayer2Btn').disabled = true;
+            document.getElementById('exportLayer2Btn').disabled = false;
+
+            log('layer2Log', `Layer 2 complete! ${layer2Data.totalSequences} sequences tested`, '#0f0');
+
+            displayLayer2Results(layer2Data);
+
+            const elapsed = (Date.now() - startTime) / 1000;
+            const hours = Math.floor(elapsed / 3600);
+            const mins = Math.floor((elapsed % 3600) / 60);
+
+            alert(`Layer 2 Complete!\nTime: ${hours}h ${mins}m\nSequences: ${layer2Data.totalSequences}\nGames: ${layer2Data.totalGames}`);
+        }
+
+        function displayLayer2Results(layer2Data) {
+            const contentDiv = document.getElementById('layer2Content');
+
+            let html = '';
+
+            layer2Data.parentOpenings.forEach((parent, i) => {
+                const wasLayer1 = (parent.p1WinRateLayer1 * 100).toFixed(1);
+                const nowBest = (parent.bestP2Counters[0].p2WinRate * 100).toFixed(1);
+                const drop = (parent.p1WinRateLayer1 - (1 - parent.bestP2Counters[0].p2WinRate)) * 100;
+
+                html += `
+                    <div class="opening-card" style="margin-bottom: 20px;">
+                        <h3>Rank ${parent.rank}: P1 ${parent.p1Move.hex}-${parent.p1Move.tile}</h3>
+                        <div style="color: ${drop > 10 ? '#f44' : '#0f0'};">
+                            Layer 1: ${wasLayer1}% → Best defense brings to: ${(100 - nowBest).toFixed(1)}%
+                            (${drop > 0 ? '-' : '+'}${Math.abs(drop).toFixed(1)}%)
+                        </div>
+
+                        <button class="expand-btn" onclick="toggleResponses(${i})">
+                            Show All ${parent.p2Responses.length} Responses
+                        </button>
+
+                        <div id="responses${i}" class="response-details">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Rank</th>
+                                        <th>P2 Move</th>
+                                        <th>P2 Win%</th>
+                                        <th>P1 Win%</th>
+                                        <th>Avg Score</th>
+                                        <th>Games</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${parent.p2Responses.map((resp, j) => `
+                                        <tr ${j < 5 ? 'style="background: rgba(255,215,0,0.1);"' : ''}>
+                                            <td>${j + 1}</td>
+                                            <td>Hex ${resp.p2Move.hexId}, Tile ${resp.p2Move.tileValue}</td>
+                                            <td>${(resp.p2WinRate * 100).toFixed(1)}%</td>
+                                            <td>${(resp.p1WinRate * 100).toFixed(1)}%</td>
+                                            <td>${resp.avgScore > 0 ? '+' : ''}${resp.avgScore.toFixed(0)}</td>
+                                            <td>${resp.games}</td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div style="margin-top: 15px;">
+                            <strong>Top 5 P2 Counters (kept for Layer 3):</strong>
+                            <div style="font-size: 14px; color: #aaa; margin-top: 5px;">
+                                ${parent.bestP2Counters.map(c =>
+                                    `${c.p2Move.hexId}-${c.p2Move.tileValue} (${(c.p2WinRate*100).toFixed(1)}%)`
+                                ).join(' | ')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            contentDiv.innerHTML = html;
+            document.getElementById('layer2Results').style.display = 'block';
+        }
+
+        function toggleResponses(index) {
+            const div = document.getElementById(`responses${index}`);
+            div.classList.toggle('open');
+        }
+
+        function pauseLayer2() {
+            if (generator.isPaused) {
+                generator.resume();
+                document.getElementById('pauseLayer2Btn').textContent = '⏸ Pause';
+                log('layer2Log', 'Resumed', '#0f0');
+            } else {
+                generator.pause();
+                document.getElementById('pauseLayer2Btn').textContent = '▶ Resume';
+                log('layer2Log', 'Paused', '#ff0');
+            }
+        }
+
+        function stopLayer2() {
+            generator.stop();
+            log('layer2Log', 'Stopped by user', '#f44');
+        }
+
+        function exportLayer2() {
+            const layer2Data = generator.exportLayer(2);
+            const json = JSON.stringify(layer2Data, null, 2);
+            const blob = new Blob([json], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `hexuki_layer2_${Date.now()}.json`;
+            a.click();
+
+            URL.revokeObjectURL(url);
+            log('layer2Log', 'Layer 2 exported', '#0f0');
+        }
+
+        function log(logId, message, color = '#0f0') {
+            const logDiv = document.getElementById(logId);
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.style.color = color;
+            entry.textContent = `[${timestamp}] ${message}`;
+            logDiv.appendChild(entry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+
+            while (logDiv.children.length > 100) {
+                logDiv.removeChild(logDiv.firstChild);
+            }
+        }
+    </script>
+</body>
+</html>
