@@ -783,17 +783,22 @@ async function testWithMCTS() {
     try {
         const position = getPlayGamePositionString();
         const mctsSimulations = parseInt(document.getElementById('mctsSimulations').value) || 20000;
+        const rolloutThreshold = parseInt(document.getElementById('mctsRolloutThreshold').value) || 0;
+        const useMinimaxRollouts = (rolloutThreshold > 0);
 
         // Console notification like visualizer
         console.log(`⚡ C++ WASM MCTS: running ${mctsSimulations.toLocaleString()} simulations...`);
         console.log(`📋 Position: ${position}`);
+        console.log(`🎲 Rollout threshold: ${rolloutThreshold === 0 ? 'random only' : rolloutThreshold + ' empty hexes'}`);
 
         wasmModule.loadPosition(position);
-        const resultJson = wasmModule.mctsFindBestMove(mctsSimulations, 0, false, false, 10);
+        const resultJson = wasmModule.mctsFindBestMove(mctsSimulations, 0, false, useMinimaxRollouts, rolloutThreshold);
         const result = JSON.parse(resultJson);
 
-        console.log(`📊 MCTS result:`, result);
-        console.log(`   topMoves: ${result.topMoves ? result.topMoves.length : 'UNDEFINED'}`);
+        // Enhanced logging
+        console.log(`⏱️  MCTS completed in ${result.timeMs.toFixed(1)}ms`);
+        console.log(`🎯 Best move: H${result.hexId + 1}+${result.tileValue}`);
+        console.log(`📊 Win rate: ${(result.winRate * 100).toFixed(1)}% | Simulations: ${result.simulations.toLocaleString()} | Visits: ${result.visits.toLocaleString()}`);
 
         // Log top 10 moves like visualizer
         if (result.topMoves && result.topMoves.length > 0) {
@@ -1082,16 +1087,21 @@ async function runMCTSMove() {
 
     const position = getPlayGamePositionString();
     const mctsSimulations = parseInt(document.getElementById('mctsSimulations').value) || 20000;
+    const rolloutThreshold = parseInt(document.getElementById('mctsRolloutThreshold').value) || 0;
+    const useMinimaxRollouts = (rolloutThreshold > 0);
 
     console.log(`⚡ C++ WASM MCTS: running ${mctsSimulations.toLocaleString()} simulations...`);
+    console.log(`📋 Position: ${position}`);
+    console.log(`🎲 Rollout threshold: ${rolloutThreshold === 0 ? 'random only' : rolloutThreshold + ' empty hexes'}`);
 
-    console.log(`📋 Loading position: ${position}`);
     wasmModule.loadPosition(position);
-    const resultJson = wasmModule.mctsFindBestMove(mctsSimulations, 0, false, false, 10);
+    const resultJson = wasmModule.mctsFindBestMove(mctsSimulations, 0, false, useMinimaxRollouts, rolloutThreshold);
     const result = JSON.parse(resultJson);
 
-    console.log(`📊 MCTS returned:`, result);
-    console.log(`   topMoves count: ${result.topMoves ? result.topMoves.length : 'undefined'}`);
+    // Enhanced logging
+    console.log(`⏱️  MCTS completed in ${result.timeMs.toFixed(1)}ms`);
+    console.log(`🎯 Best move: H${result.hexId + 1}+${result.tileValue}`);
+    console.log(`📊 Win rate: ${(result.winRate * 100).toFixed(1)}% | Simulations: ${result.simulations.toLocaleString()} | Visits: ${result.visits.toLocaleString()}`);
 
     // Log top 10 moves like visualizer
     if (result.topMoves && result.topMoves.length > 0) {

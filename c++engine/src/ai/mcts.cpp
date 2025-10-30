@@ -246,6 +246,10 @@ double MCTS::simulate(HexukiBitboard& board, const MCTSConfig& config) {
                 int currentPlayer = board.getCurrentPlayer();
                 int nodesSearched = 0;
 
+                // Create local killer/history tables for this simulation
+                minimax::KillerMoves killers;
+                minimax::HistoryTable history;
+
                 // Call minimax alpha-beta with shared TT
                 int score = minimax::alphaBeta(
                     board,
@@ -255,7 +259,10 @@ double MCTS::simulate(HexukiBitboard& board, const MCTSConfig& config) {
                     *sharedMinimaxTT,  // SHARED TT across all simulations!
                     nodesSearched,
                     std::chrono::steady_clock::now(),
-                    30000  // timeout
+                    30000,  // timeout
+                    killers,
+                    history,
+                    0  // ply starts at 0
                 );
 
                 // Minimax score is from CURRENT PLAYER's perspective

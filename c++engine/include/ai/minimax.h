@@ -97,6 +97,69 @@ SearchResult findBestMove(HexukiBitboard& board, const SearchConfig& config = Se
 SearchResult findBestMove(HexukiBitboard& board, int depth, int timeLimitMs = 30000);
 
 /**
+ * Killer Moves Heuristic
+ * Tracks moves that recently caused beta cutoffs at each depth
+ */
+struct KillerMoves {
+    static constexpr int MAX_DEPTH = 50;
+    Move killer1[MAX_DEPTH];  // Primary killer move at each depth
+    Move killer2[MAX_DEPTH];  // Secondary killer move at each depth
+
+    KillerMoves() {
+        for (int i = 0; i < MAX_DEPTH; i++) {
+            killer1[i] = Move();
+            killer2[i] = Move();
+        }
+    }
+
+    void update(int ply, const Move& move) {
+        if (ply < 0 || ply >= MAX_DEPTH) return;
+        // If move is not already killer1, shift killers down
+        if (!(move == killer1[ply])) {
+            killer2[ply] = killer1[ply];
+            killer1[ply] = move;
+        }
+    }
+
+    bool isKiller(int ply, const Move& move) const {
+        if (ply < 0 || ply >= MAX_DEPTH) return false;
+        return (move == killer1[ply]) || (move == killer2[ply]);
+    }
+};
+
+/**
+ * History Heuristic
+ * Tracks historically successful (hexId, tileValue) pairs
+ */
+struct HistoryTable {
+    static constexpr int NUM_HEXES = 19;
+    int scores[NUM_HEXES][10];  // scores[hexId][tileValue] - max tile value is 9
+
+    HistoryTable() {
+        for (int i = 0; i < NUM_HEXES; i++) {
+            for (int j = 0; j < 10; j++) {
+                scores[i][j] = 0;
+            }
+        }
+    }
+
+    void update(const Move& move, int depth) {
+        if (move.hexId >= 0 && move.hexId < NUM_HEXES &&
+            move.tileValue >= 0 && move.tileValue < 10) {
+            scores[move.hexId][move.tileValue] += depth * depth;  // Deeper moves weighted more
+        }
+    }
+
+    int getScore(const Move& move) const {
+        if (move.hexId >= 0 && move.hexId < NUM_HEXES &&
+            move.tileValue >= 0 && move.tileValue < 10) {
+            return scores[move.hexId][move.tileValue];
+        }
+        return 0;
+    }
+};
+
+/**
  * Alpha-beta search (internal, recursive)
  *
  * @param board Current position
@@ -107,6 +170,9 @@ SearchResult findBestMove(HexukiBitboard& board, int depth, int timeLimitMs = 30
  * @param nodesSearched Counter for nodes visited
  * @param startTime Search start time
  * @param timeLimitMs Time limit
+ * @param killers Killer move heuristic table
+ * @param history History heuristic table
+ * @param ply Current ply depth (for killer moves)
  * @return Evaluation score
  */
 int alphaBeta(
@@ -117,7 +183,10 @@ int alphaBeta(
     TranspositionTable& tt,
     int& nodesSearched,
     std::chrono::steady_clock::time_point startTime,
-    int timeLimitMs
+    int timeLimitMs,
+    KillerMoves& killers,
+    HistoryTable& history,
+    int ply
 );
 
 /**
@@ -135,8 +204,9 @@ int quiescence(
 /**
  * Move ordering: sort moves to search best ones first
  * Better move ordering = more alpha-beta cutoffs = faster search
+ * Uses killer move and history heuristics for fast ordering
  */
-void orderMoves(std::vector<Move>& moves, HexukiBitboard& board, const TTEntry* ttEntry = nullptr);
+void orderMoves(std::vector<Move>& moves, const TTEntry* ttEntry, const KillerMoves& killers, const HistoryTable& history, int ply);
 
 /**
  * Simple evaluation function

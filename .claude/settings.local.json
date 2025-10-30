@@ -18,7 +18,10 @@
       "Bash(git add:*)",
       "Bash(git commit:*)",
       "Bash(git branch:*)",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git revert:*)",
+      "Bash(build_wasm.bat)",
+      "Bash(cmd /c build_wasm.bat)"
     ],
     "deny": [],
     "ask": []
