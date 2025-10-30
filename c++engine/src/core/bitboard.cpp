@@ -443,13 +443,10 @@ void HexukiBitboard::makeMove(const Move& move) {
         tiles.erase(it);  // Remove first occurrence
     }
 
-    // Update symmetry tracking (if we ever re-enable it)
-    if (symmetryStillPossible) {
-        int mirrorHexId = VERTICAL_MIRROR_PAIRS[move.hexId];
-        if (hexValues[mirrorHexId] != 0 && hexValues[mirrorHexId] != move.tileValue) {
-            symmetryStillPossible = false;
-        }
-    }
+    // BUGFIX: Symmetry tracking removed - was causing non-deterministic minimax results
+    // The symmetryStillPossible flag was being modified here but NOT restored in unmakeMove,
+    // causing board state corruption when move ordering called makeMove/unmakeMove repeatedly.
+    // This led to different minimax scores for the same position (e.g., +265, +261, +275).
 
     // Update zobrist hash
     updateZobristHash(move);

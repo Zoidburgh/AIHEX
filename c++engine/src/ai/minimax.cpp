@@ -166,8 +166,13 @@ int alphaBeta(
 
     // Transposition table lookup
     TTEntry ttEntry;
+    bool ttValid = false;  // Track if TT entry is usable for move ordering
+
     if (tt.probe(hash, ttEntry)) {
         if (ttEntry.depth >= depth) {
+            // Entry is from sufficient depth - can be used for both score and move ordering
+            ttValid = true;
+
             if (ttEntry.flag == TTEntry::EXACT) {
                 return ttEntry.score;
             } else if (ttEntry.flag == TTEntry::LOWER_BOUND) {
@@ -180,6 +185,8 @@ int alphaBeta(
                 return ttEntry.score;
             }
         }
+        // If ttEntry.depth < depth, entry is from shallow search - don't use it!
+        // Using shallow entries for move ordering causes wrong scores at deeper depths
     }
 
     // Get and order moves
@@ -190,7 +197,9 @@ int alphaBeta(
         return evaluate(board);
     }
 
-    orderMoves(moves, board, &ttEntry);
+    // BUGFIX: Only use TT entry for move ordering if it's from sufficient depth
+    // Passing stale shallow entries was causing non-deterministic scores (265→261→275)
+    orderMoves(moves, board, ttValid ? &ttEntry : nullptr);
 
     int bestScore = -INF;
     Move bestMove = moves[0];
