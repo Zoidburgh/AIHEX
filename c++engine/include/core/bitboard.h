@@ -99,11 +99,6 @@ private:
     bool symmetryStillPossible;
     bool tilesAreIdentical;  // Only enforce anti-symmetry if both players have identical starting tiles
 
-    // Incremental scoring (CRITICAL OPTIMIZATION - eliminates 26M score recalculations)
-    // Instead of walking all chains every time, we update scores incrementally
-    int cachedP1Score;  // Current score for player 1
-    int cachedP2Score;  // Current score for player 2
-
     // Zobrist hashing (for transposition table)
     uint64_t zobristHash;
 
