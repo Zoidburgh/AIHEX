@@ -25,9 +25,17 @@ public:
     HexukiBitboard(const HexukiBitboard& other) = default;
     HexukiBitboard& operator=(const HexukiBitboard& other) = default;
 
-    // Game state queries
-    bool isHexOccupied(int hexId) const;
-    int getTileValue(int hexId) const;        // Returns 0 if empty, 1-9 if occupied
+    // Game state queries (inlined for performance - called billions of times)
+    inline bool isHexOccupied(int hexId) const {
+        if (hexId < 0 || hexId >= NUM_HEXES) return false;
+        return (hexOccupied & (1u << hexId)) != 0;
+    }
+
+    inline int getTileValue(int hexId) const {
+        if (hexId < 0 || hexId >= NUM_HEXES) return 0;
+        return hexValues[hexId];
+    }
+
     int getCurrentPlayer() const { return currentPlayer; }
     bool isGameOver() const;
 

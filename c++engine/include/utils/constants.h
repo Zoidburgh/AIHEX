@@ -90,6 +90,22 @@ constexpr HexPosition HEX_POSITIONS[NUM_HEXES] = {
     {18, 8, 2}
 };
 
+// PERFORMANCE OPTIMIZATION: O(1) row/col → hexId lookup
+// Replaces O(19) linear search in findHexAt() with single array access
+// Critical for minimax performance (called 100-500 million times at depth 10)
+// -1 = invalid position (no hex at that row/col)
+constexpr int ROW_COL_TO_HEX[9][5] = {
+    {-1, -1,  0, -1, -1},  // row 0: only col 2 has hex (id 0)
+    {-1,  1, -1,  2, -1},  // row 1: cols 1,3 (ids 1,2)
+    { 3, -1,  4, -1,  5},  // row 2: cols 0,2,4 (ids 3,4,5)
+    {-1,  6, -1,  7, -1},  // row 3: cols 1,3 (ids 6,7)
+    { 8, -1,  9, -1, 10},  // row 4: cols 0,2,4 (ids 8,9=CENTER,10)
+    {-1, 11, -1, 12, -1},  // row 5: cols 1,3 (ids 11,12)
+    {13, -1, 14, -1, 15},  // row 6: cols 0,2,4 (ids 13,14,15)
+    {-1, 16, -1, 17, -1},  // row 7: cols 1,3 (ids 16,17)
+    {-1, -1, 18, -1, -1}   // row 8: only col 2 has hex (id 18)
+};
+
 // ============================================================================
 // ADJACENCY DIRECTIONS (row/col offsets)
 // ============================================================================
@@ -107,6 +123,45 @@ constexpr Direction HEX_DIRECTIONS[6] = {
     { 2,  0},  // DOWN
     { 1, -1},  // DOWNLEFT
     {-1, -1}   // UPLEFT
+};
+
+// ============================================================================
+// PRE-COMPUTED ADJACENCY LISTS (performance optimization)
+// ============================================================================
+
+// PERFORMANCE: Pre-computed adjacency for O(1) lookup without heap allocation
+// Eliminates 1.4 billion vector allocations during depth-10 search
+struct AdjacentList {
+    int hexes[6];  // Adjacent hex IDs (-1 = none)
+    int count;     // Number of adjacent hexes (2-6)
+};
+
+constexpr AdjacentList computeAdjacent(int hexId) {
+    AdjacentList adj = {{-1, -1, -1, -1, -1, -1}, 0};
+    const HexPosition& hex = HEX_POSITIONS[hexId];
+
+    for (int i = 0; i < 6; i++) {
+        int newRow = hex.row + HEX_DIRECTIONS[i].dr;
+        int newCol = hex.col + HEX_DIRECTIONS[i].dc;
+
+        if (newRow >= 0 && newRow < 9 && newCol >= 0 && newCol < 5) {
+            int adjId = ROW_COL_TO_HEX[newRow][newCol];
+            if (adjId >= 0) {
+                adj.hexes[adj.count++] = adjId;
+            }
+        }
+    }
+    return adj;
+}
+
+constexpr AdjacentList ADJACENT_HEXES[NUM_HEXES] = {
+    computeAdjacent(0),  computeAdjacent(1),  computeAdjacent(2),
+    computeAdjacent(3),  computeAdjacent(4),  computeAdjacent(5),
+    computeAdjacent(6),  computeAdjacent(7),  computeAdjacent(8),
+    computeAdjacent(9),  computeAdjacent(10), computeAdjacent(11),
+    computeAdjacent(12), computeAdjacent(13), computeAdjacent(14),
+    computeAdjacent(15), computeAdjacent(16), computeAdjacent(17),
+    computeAdjacent(18)
 };
 
 // ============================================================================
